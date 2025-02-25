@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Unlicense
-pragma solidity 0.8.26;
+pragma solidity 0.8.28;
 
 interface IFlywheelCampaigns {
   /// @notice Thrown when attempting to use an unsupported token address

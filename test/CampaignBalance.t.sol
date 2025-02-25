@@ -1,10 +1,10 @@
-pragma solidity 0.8.26;
+pragma solidity 0.8.28;
 
 import "forge-std/console.sol";
 import { Test } from "forge-std/Test.sol";
 
-import { CampaignBalance, NativePaymentReceived, OnlyAccidentalToken, AccidentalTokenWithdrawn, OnlyParent, OnlyAdvertiser } from "../../contracts/CampaignBalance.sol";
-import { DummyERC20 } from "../../contracts/test/DummyERC20.sol";
+import { CampaignBalance, NativePaymentReceived, OnlyAccidentalToken, AccidentalTokenWithdrawn, OnlyParent, OnlyAdvertiser } from "../src/CampaignBalance.sol";
+import { DummyERC20 } from "../src/test/DummyERC20.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
 contract CampaignBalanceTest is Test {

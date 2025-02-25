@@ -1,11 +1,11 @@
-pragma solidity 0.8.26;
+pragma solidity 0.8.28;
 
 import "forge-std/Test.sol";
-import { FlywheelPublisherRegistry } from "../../contracts/FlywheelPublisherRegistry.sol";
+import { FlywheelPublisherRegistry } from "../src/FlywheelPublisherRegistry.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { FlywheelPublisherRegistryV2 } from "../../contracts/test/DummyUpgrades.sol";
+import { FlywheelPublisherRegistryV2 } from "../src/test/DummyUpgrades.sol";
 
-contract PublisherRegistryUpgradesTest is Test {
+contract PublisherRegistryUpgradesTest is Test {  
   FlywheelPublisherRegistry public implementation;
   FlywheelPublisherRegistry public pubRegistry;
   ERC1967Proxy public proxy;

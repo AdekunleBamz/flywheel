@@ -1,10 +1,10 @@
-pragma solidity 0.8.26;
+pragma solidity 0.8.28;
 
 import "forge-std/console.sol";
 import { Test } from "forge-std/Test.sol";
-import { FlywheelPublisherRegistry, Unauthorized, RefCodeAlreadyTaken } from "../../contracts/FlywheelPublisherRegistry.sol";
+import { FlywheelPublisherRegistry, Unauthorized, RefCodeAlreadyTaken } from "../src/FlywheelPublisherRegistry.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { PublisherRegistered, UpdatePublisherChainPayoutAddress, UpdatePublisherDefaultPayoutAddress, UpdateMetadataUrl } from "../../contracts/FlywheelPublisherRegistry.sol";
+import { PublisherRegistered, UpdatePublisherChainPayoutAddress, UpdatePublisherDefaultPayoutAddress, UpdateMetadataUrl } from "../src/FlywheelPublisherRegistry.sol";
 
 contract FlywheelPublisherRegistryTest is Test {
   FlywheelPublisherRegistry public implementation;

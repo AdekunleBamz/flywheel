@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.26;
+pragma solidity 0.8.28;
 
 import { console } from "forge-std/console.sol";
 import { Test } from "forge-std/Test.sol";
-import { FlywheelCampaigns } from "../../contracts/FlywheelCampaigns.sol";
-import { IFlywheelCampaigns } from "../../contracts/interfaces/IFlywheelCampaigns.sol";
-import { DummyERC20 } from "../../contracts/test/DummyERC20.sol";
-import { CampaignBalance } from "../../contracts/CampaignBalance.sol";
+import { FlywheelCampaigns } from "../src/FlywheelCampaigns.sol";
+import { IFlywheelCampaigns } from "../src/interfaces/IFlywheelCampaigns.sol";
+import { DummyERC20 } from "../src/test/DummyERC20.sol";
+import { CampaignBalance } from "../src/CampaignBalance.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract GasBenchmarkTest is Test {
