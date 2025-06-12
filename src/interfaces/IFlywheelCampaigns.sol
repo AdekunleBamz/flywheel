@@ -35,6 +35,8 @@ interface IFlywheelCampaigns {
   error PublisherAllowlistNotSet();
   /// @notice Thrown when publisher ref code does not exist
   error InvalidPublisherRefCode();
+  /// @notice Thrown when conversion config event type doesn't match attribution function type
+  error InvalidEventType();
   /// @notice Thrown when trying to renounce ownership (disabled for security)
   error OwnershipRenunciationDisabled();
 
@@ -48,8 +50,8 @@ interface IFlywheelCampaigns {
     string campaignMetadataUrl
   );
 
-  /// @notice Emitted when a campaign's status is updated
-  event UpdateCampaignStatus(uint256 indexed campaignId, uint8 status);
+  /// @notice Emitted when campaign status is updated
+  event UpdateCampaignStatus(uint256 indexed campaignId, uint8 newStatus);
 
   /// @notice Emitted when an onchain attribution event occurs
   event OnchainConversion(
@@ -87,10 +89,10 @@ interface IFlywheelCampaigns {
   );
 
   /// @notice Emitted when rewards are claimed by a recipient
-  event ClaimedRewards(uint256 indexed campaignId, address indexed payoutAddress, uint256 payoutAmount, address to);
+  event ClaimedReward(uint256 indexed campaignId, address indexed payoutAddress, uint256 payoutAmount, address to);
 
   /// @notice Emitted when rewards are pushed to a recipient
-  event PushedRewards(uint256 indexed campaignId, address indexed payoutAddress, uint256 payoutAmount, address to);
+  event PushedReward(uint256 indexed campaignId, address indexed payoutAddress, uint256 payoutAmount, address to);
 
   /// @notice Emitted when allowed token address status is updated
   event UpdateAllowedTokenAddress(address indexed tokenAddress, bool indexed allowed);

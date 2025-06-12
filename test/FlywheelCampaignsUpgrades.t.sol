@@ -49,7 +49,7 @@ contract FlywheelCampaignsUpgradesTest is Test {
     publisherRegistryImplementation = new FlywheelPublisherRegistry();
 
     // Deploy publisher registry proxy
-    bytes memory publisherRegistryInitData = abi.encodeCall(FlywheelPublisherRegistry.initialize, (owner));
+    bytes memory publisherRegistryInitData = abi.encodeCall(FlywheelPublisherRegistry.initialize, (owner, address(0)));
 
     ERC1967Proxy publisherRegistryProxy = new ERC1967Proxy(
       address(publisherRegistryImplementation),

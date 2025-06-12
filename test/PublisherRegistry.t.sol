@@ -2,9 +2,9 @@ pragma solidity 0.8.29;
 
 import "forge-std/console.sol";
 import { Test } from "forge-std/Test.sol";
-import { FlywheelPublisherRegistry, Unauthorized, RefCodeAlreadyTaken, OwnershipRenunciationDisabled } from "../src/FlywheelPublisherRegistry.sol";
+import { FlywheelPublisherRegistry, Unauthorized, RefCodeAlreadyTaken, OwnershipRenunciationDisabled, InvalidAddress } from "../src/FlywheelPublisherRegistry.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { PublisherRegistered, UpdatePublisherChainPayoutAddress, UpdatePublisherDefaultPayoutAddress, UpdateMetadataUrl } from "../src/FlywheelPublisherRegistry.sol";
+import { PublisherRegistered, UpdatePublisherChainPayoutAddress, UpdatePublisherDefaultPayoutAddress, UpdateMetadataUrl, UpdateSignerAddress } from "../src/FlywheelPublisherRegistry.sol";
 
 contract FlywheelPublisherRegistryTest is Test {
   FlywheelPublisherRegistry public implementation;
@@ -12,6 +12,7 @@ contract FlywheelPublisherRegistryTest is Test {
   ERC1967Proxy public proxy;
 
   address private owner = address(this);
+  address private signer = address(0x123);
 
   function setUp() public {
     vm.startPrank(owner);
@@ -19,8 +20,8 @@ contract FlywheelPublisherRegistryTest is Test {
     // Deploy implementation
     implementation = new FlywheelPublisherRegistry();
 
-    // Deploy proxy
-    bytes memory initData = abi.encodeWithSelector(FlywheelPublisherRegistry.initialize.selector, owner);
+    // Deploy proxy with signer address
+    bytes memory initData = abi.encodeWithSelector(FlywheelPublisherRegistry.initialize.selector, owner, signer);
     proxy = new ERC1967Proxy(address(implementation), initData);
 
     // Create interface to proxy
@@ -31,6 +32,179 @@ contract FlywheelPublisherRegistryTest is Test {
 
   function test_constructor() public {
     assertEq(pubRegistry.owner(), owner);
+    assertEq(pubRegistry.signerAddress(), signer);
+  }
+
+  function test_initializeWithZeroOwner() public {
+    // Deploy fresh implementation
+    FlywheelPublisherRegistry freshImpl = new FlywheelPublisherRegistry();
+
+    // Try to initialize with zero owner
+    bytes memory initData = abi.encodeWithSelector(FlywheelPublisherRegistry.initialize.selector, address(0), signer);
+
+    vm.expectRevert(InvalidAddress.selector);
+    new ERC1967Proxy(address(freshImpl), initData);
+  }
+
+  function test_initializeWithZeroSigner() public {
+    // Deploy fresh implementation
+    FlywheelPublisherRegistry freshImpl = new FlywheelPublisherRegistry();
+
+    // Initialize with zero signer (should be allowed)
+    bytes memory initData = abi.encodeWithSelector(FlywheelPublisherRegistry.initialize.selector, owner, address(0));
+    ERC1967Proxy freshProxy = new ERC1967Proxy(address(freshImpl), initData);
+    FlywheelPublisherRegistry freshRegistry = FlywheelPublisherRegistry(address(freshProxy));
+
+    assertEq(freshRegistry.owner(), owner);
+    assertEq(freshRegistry.signerAddress(), address(0));
+  }
+
+  function test_updateSignerAddress() public {
+    address newSigner = address(0x456);
+
+    vm.startPrank(owner);
+
+    // Expect the event before calling the function
+    vm.expectEmit(true, true, true, true);
+    emit UpdateSignerAddress(newSigner);
+
+    pubRegistry.updateSignerAddress(newSigner);
+
+    vm.stopPrank();
+
+    assertEq(pubRegistry.signerAddress(), newSigner);
+  }
+
+  function test_updateSignerAddress_Unauthorized() public {
+    address newSigner = address(0x456);
+    address unauthorized = address(0x789);
+
+    vm.startPrank(unauthorized);
+    vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", unauthorized));
+    pubRegistry.updateSignerAddress(newSigner);
+    vm.stopPrank();
+  }
+
+  function test_updateSignerAddress_ToZero() public {
+    vm.startPrank(owner);
+
+    // Update to zero address (should be allowed)
+    vm.expectEmit(true, true, true, true);
+    emit UpdateSignerAddress(address(0));
+
+    pubRegistry.updateSignerAddress(address(0));
+
+    vm.stopPrank();
+
+    assertEq(pubRegistry.signerAddress(), address(0));
+  }
+
+  function test_registerPublisherCustom_BySigner() public {
+    string memory customRefCode = "custom123";
+    address publisherOwner = address(0x789);
+    string memory metadataUrl = "https://example.com";
+    address defaultPayout = address(0x101);
+
+    vm.startPrank(signer);
+
+    // Expect the event before calling the function
+    vm.expectEmit(true, true, true, true);
+    emit PublisherRegistered(publisherOwner, defaultPayout, customRefCode, metadataUrl, true);
+
+    pubRegistry.registerPublisherCustom(
+      customRefCode,
+      publisherOwner,
+      metadataUrl,
+      defaultPayout,
+      new FlywheelPublisherRegistry.OverridePublisherPayout[](0)
+    );
+
+    vm.stopPrank();
+
+    // Verify the publisher was registered
+    (address registeredOwner, string memory registeredMetadataUrl, address registeredDefaultPayout) = pubRegistry
+      .publishers(customRefCode);
+    assertEq(registeredOwner, publisherOwner);
+    assertEq(registeredMetadataUrl, metadataUrl);
+    assertEq(registeredDefaultPayout, defaultPayout);
+  }
+
+  function test_registerPublisherCustom_ByOwner() public {
+    string memory customRefCode = "owner123";
+    address publisherOwner = address(0x789);
+    string memory metadataUrl = "https://example.com";
+    address defaultPayout = address(0x101);
+
+    vm.startPrank(owner);
+
+    pubRegistry.registerPublisherCustom(
+      customRefCode,
+      publisherOwner,
+      metadataUrl,
+      defaultPayout,
+      new FlywheelPublisherRegistry.OverridePublisherPayout[](0)
+    );
+
+    vm.stopPrank();
+
+    // Verify the publisher was registered
+    (address registeredOwner, , ) = pubRegistry.publishers(customRefCode);
+    assertEq(registeredOwner, publisherOwner);
+  }
+
+  function test_registerPublisherCustom_Unauthorized() public {
+    string memory customRefCode = "unauth123";
+    address unauthorized = address(0x999);
+
+    vm.startPrank(unauthorized);
+
+    vm.expectRevert(Unauthorized.selector);
+    pubRegistry.registerPublisherCustom(
+      customRefCode,
+      address(0x789),
+      "https://example.com",
+      address(0x101),
+      new FlywheelPublisherRegistry.OverridePublisherPayout[](0)
+    );
+
+    vm.stopPrank();
+  }
+
+  function test_registerPublisherCustom_WithZeroSigner() public {
+    // Deploy registry with zero signer
+    FlywheelPublisherRegistry freshImpl = new FlywheelPublisherRegistry();
+    bytes memory initData = abi.encodeWithSelector(FlywheelPublisherRegistry.initialize.selector, owner, address(0));
+    ERC1967Proxy freshProxy = new ERC1967Proxy(address(freshImpl), initData);
+    FlywheelPublisherRegistry freshRegistry = FlywheelPublisherRegistry(address(freshProxy));
+
+    string memory customRefCode = "zero123";
+
+    // Only owner should be able to call when signer is zero
+    vm.startPrank(owner);
+    freshRegistry.registerPublisherCustom(
+      customRefCode,
+      address(0x789),
+      "https://example.com",
+      address(0x101),
+      new FlywheelPublisherRegistry.OverridePublisherPayout[](0)
+    );
+    vm.stopPrank();
+
+    // Verify it worked
+    (address registeredOwner, , ) = freshRegistry.publishers(customRefCode);
+    assertEq(registeredOwner, address(0x789));
+
+    // Unauthorized address should fail
+    vm.startPrank(address(0x999));
+    vm.expectRevert(Unauthorized.selector);
+    freshRegistry.registerPublisherCustom(
+      "fail123",
+      address(0x789),
+      "https://example.com",
+      address(0x101),
+      new FlywheelPublisherRegistry.OverridePublisherPayout[](0)
+    );
+    vm.stopPrank();
   }
 
   string private publisherMetadataUrl = "https://example.com";
@@ -630,7 +804,7 @@ contract FlywheelPublisherRegistryTest is Test {
 
     // Old owner should not be able to register custom publishers
     vm.prank(owner);
-    vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", owner));
+    vm.expectRevert(Unauthorized.selector);
     pubRegistry.registerPublisherCustom(
       "oldowner123",
       address(0x789),

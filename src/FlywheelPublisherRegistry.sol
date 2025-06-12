@@ -14,6 +14,9 @@ error RefCodeAlreadyTaken();
 /// @notice Thrown when trying to renounce ownership (disabled for security)
 error OwnershipRenunciationDisabled();
 
+/// @notice Thrown when provided address is invalid (usually zero address)
+error InvalidAddress();
+
 /// @notice Emitted when a new publisher is registered
 event PublisherRegistered(
   address indexed owner,
@@ -34,12 +37,18 @@ event UpdateMetadataUrl(string refCode, string metadataUrl);
 /// @notice Emitted when a publisher's owner is updated
 event UpdatedPublisherOwner(string refCode, address newOwner);
 
+/// @notice Emitted when the signer address is updated
+event UpdateSignerAddress(address indexed signerAddress);
+
 /// @notice Registry for publishers in the Flywheel Protocol
 /// @dev Manages publisher registration and payout address management
 contract FlywheelPublisherRegistry is Initializable, UUPSUpgradeable, Ownable2StepUpgradeable {
   /// @notice Counter for generating unique publisher ref codes
   uint256 public nextPublisherNonce = 1;
   uint256 private constant REF_CODE_LENGTH = 8;
+
+  /// @notice Address authorized to call registerPublisherCustom
+  address public signerAddress;
 
   /// @notice Mapping of publisher ref codes to their information
   mapping(string refCode => Publisher) public publishers;
@@ -65,11 +74,22 @@ contract FlywheelPublisherRegistry is Initializable, UUPSUpgradeable, Ownable2St
 
   /// @notice Initializes the contract (replaces constructor)
   /// @param _owner Address that will own the contract
-  function initialize(address _owner) external initializer {
+  /// @param _signerAddress Address authorized to call registerPublisherCustom
+  function initialize(address _owner, address _signerAddress) external initializer {
+    if (_owner == address(0)) {
+      revert InvalidAddress();
+    }
+
     __Ownable2Step_init();
     // Transfer ownership to the provided owner address
     _transferOwnership(_owner);
     __UUPSUpgradeable_init();
+
+    // Set signer address (can be address(0) if not using signer)
+    signerAddress = _signerAddress;
+    if (_signerAddress != address(0)) {
+      emit UpdateSignerAddress(_signerAddress);
+    }
   }
 
   /// @notice Ensures caller is the owner of the specified publisher
@@ -79,6 +99,24 @@ contract FlywheelPublisherRegistry is Initializable, UUPSUpgradeable, Ownable2St
       revert Unauthorized();
     }
     _;
+  }
+
+  /// @notice Ensures caller is either the owner or authorized signer
+  modifier onlyOwnerOrSigner() {
+    bool isOwner = msg.sender == owner();
+    bool isSigner = msg.sender == signerAddress;
+
+    if (!isOwner && !isSigner) {
+      revert Unauthorized();
+    }
+    _;
+  }
+
+  /// @notice Updates the signer address
+  /// @param _newSignerAddress New signer address (can be address(0) to disable)
+  function updateSignerAddress(address _newSignerAddress) external onlyOwner {
+    signerAddress = _newSignerAddress;
+    emit UpdateSignerAddress(_newSignerAddress);
   }
 
   /// @notice Registers a new publisher in the system
@@ -120,7 +158,7 @@ contract FlywheelPublisherRegistry is Initializable, UUPSUpgradeable, Ownable2St
     string memory _metadataUrl,
     address _defaultPayout,
     OverridePublisherPayout[] memory _overridePayouts
-  ) external onlyOwner {
+  ) external onlyOwnerOrSigner {
     // check if ref code is already taken
     if (publishers[_refCode].owner != address(0)) {
       revert RefCodeAlreadyTaken();

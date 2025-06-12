@@ -19,7 +19,7 @@ contract PublisherRegistryUpgradesTest is Test {
     implementation = new FlywheelPublisherRegistry();
 
     // Deploy proxy
-    bytes memory initData = abi.encodeWithSelector(FlywheelPublisherRegistry.initialize.selector, owner);
+    bytes memory initData = abi.encodeWithSelector(FlywheelPublisherRegistry.initialize.selector, owner, address(0));
     proxy = new ERC1967Proxy(address(implementation), initData);
 
     // Create interface to proxy

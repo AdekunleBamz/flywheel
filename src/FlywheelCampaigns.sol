@@ -426,7 +426,7 @@ contract FlywheelCampaigns is Initializable, Ownable2StepUpgradeable, UUPSUpgrad
       // 2. the recipient is the msg.sender & has a non-zero balance in the campaign
       uint256 recipientRewardAmount = _claimReward(campaignId, msg.sender, _to);
       if (recipientRewardAmount != 0) {
-        emit ClaimedRewards(_campaignIds[i], msg.sender, recipientRewardAmount, _to);
+        emit ClaimedReward(_campaignIds[i], msg.sender, recipientRewardAmount, _to);
       }
     }
   }
@@ -445,7 +445,7 @@ contract FlywheelCampaigns is Initializable, Ownable2StepUpgradeable, UUPSUpgrad
     uint256 recipientAddressesLength = _recipientAddresses.length;
     for (uint256 i; i < recipientAddressesLength; i++) {
       uint256 recipientRewardAmount = _claimReward(_campaignId, _recipientAddresses[i], _recipientAddresses[i]);
-      emit PushedRewards(_campaignId, _recipientAddresses[i], recipientRewardAmount, _recipientAddresses[i]);
+      emit PushedReward(_campaignId, _recipientAddresses[i], recipientRewardAmount, _recipientAddresses[i]);
     }
   }
 
@@ -463,10 +463,12 @@ contract FlywheelCampaigns is Initializable, Ownable2StepUpgradeable, UUPSUpgrad
     for (uint256 i; i < eventsLength; i++) {
       _onlyExistingConversionConfig(_campaignId, _events[i].conversionConfigId);
       _onlyAllowedPublisherRefCode(_campaignId, _events[i].publisherRefCode);
+      _onlyValidEventType(_campaignId, _events[i].conversionConfigId, EventType.OFFCHAIN);
       // Validation done up to this point
       // 1. onlyValidCampaignAttribution confirms campaign is in valid state & attribution provider is valid
       // 2. _onlyExistingConversionConfig confirms conversion config exists
       // 3. _onlyAllowedPublisherRefCode confirms publisher ref code is allowed (if set)
+      // 4. _onlyValidEventType confirms conversion config event type matches function type
 
       // if publisher registry is defined, validate publisher ref code exists
       if (isInvalidPublisherRefCode(_events[i].publisherRefCode)) {
@@ -542,6 +544,7 @@ contract FlywheelCampaigns is Initializable, Ownable2StepUpgradeable, UUPSUpgrad
     for (uint256 i; i < eventsLength; i++) {
       _onlyExistingConversionConfig(_campaignId, _events[i].conversionConfigId);
       _onlyAllowedPublisherRefCode(_campaignId, _events[i].publisherRefCode);
+      _onlyValidEventType(_campaignId, _events[i].conversionConfigId, EventType.ONCHAIN);
 
       // if publisher registry is defined, validate publisher ref code exists
       if (isInvalidPublisherRefCode(_events[i].publisherRefCode)) {
@@ -776,6 +779,21 @@ contract FlywheelCampaigns is Initializable, Ownable2StepUpgradeable, UUPSUpgrad
   function _onlyAllowedPublisherRefCode(uint256 _campaignId, string memory _publisherRefCode) private view {
     if (campaigns[_campaignId].isAllowlistSet && !isPublisherRefCodeAllowed(_campaignId, _publisherRefCode)) {
       revert PublisherRefCodeNotAllowed();
+    }
+  }
+
+  // @notice Private function to check if conversion config event type matches attribution function type
+  // @param _campaignId Campaign ID to check
+  // @param _conversionConfigId Conversion config ID to check
+  // @param _expectedEventType Expected event type for this attribution function
+  function _onlyValidEventType(
+    uint256 _campaignId,
+    uint8 _conversionConfigId,
+    EventType _expectedEventType
+  ) private view {
+    EventType configEventType = campaigns[_campaignId].conversionConfigs[_conversionConfigId].eventType;
+    if (configEventType != _expectedEventType) {
+      revert InvalidEventType();
     }
   }
 

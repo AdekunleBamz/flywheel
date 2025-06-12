@@ -20,3 +20,4 @@ Follow this sequential workflow:
    - If updating relevant to a specific test you can use `forge test --match-test TEST_NAME_HERE`
 5. Ensure your unit-tests have good code coverage for the code you have written with `forge coverage`
 6. Consider gas optimization and run gas reports with `forge test --gas-report` for critical functions
+7. For Event Names, never end the event name with and "s". This is to make the contract more compatible with the graph. ie. CORRECT: ClaimReward(...). WRONG: ClaimRewards(...).

@@ -67,7 +67,7 @@ contract FlywheelCampaignsTest is Test {
     publisherRegistryImplementation = new FlywheelPublisherRegistry();
 
     // Deploy publisher registry proxy
-    bytes memory publisherRegistryInitData = abi.encodeCall(FlywheelPublisherRegistry.initialize, (owner));
+    bytes memory publisherRegistryInitData = abi.encodeCall(FlywheelPublisherRegistry.initialize, (owner, address(0)));
     ERC1967Proxy publisherRegistryProxy = new ERC1967Proxy(
       address(publisherRegistryImplementation),
       publisherRegistryInitData
@@ -502,7 +502,7 @@ contract FlywheelCampaignsTest is Test {
     // Create a sample OnchainEvent
     IFlywheelCampaigns.OnchainEvent[] memory events = new IFlywheelCampaigns.OnchainEvent[](2);
     events[0] = IFlywheelCampaigns.OnchainEvent({
-      conversionConfigId: 1,
+      conversionConfigId: 2, // Use ONCHAIN config for onchain events
       eventId: bytes16(0x1234567890abcdef1234567890abcdef),
       payoutAddress: publisher1Address,
       payoutAmount: publisherAttributedAmount1,
@@ -517,7 +517,7 @@ contract FlywheelCampaignsTest is Test {
     });
 
     events[1] = IFlywheelCampaigns.OnchainEvent({
-      conversionConfigId: 1,
+      conversionConfigId: 2, // Use ONCHAIN config for onchain events
       eventId: bytes16(0x1234567890abcdef1234567890abcdef),
       payoutAddress: publisher2Address,
       payoutAmount: publisherAttributedAmount2,
@@ -645,7 +645,7 @@ contract FlywheelCampaignsTest is Test {
     // Create a sample OnchainEvent
     IFlywheelCampaigns.OnchainEvent[] memory events = new IFlywheelCampaigns.OnchainEvent[](3);
     events[0] = IFlywheelCampaigns.OnchainEvent({
-      conversionConfigId: 1,
+      conversionConfigId: 2, // Use ONCHAIN config for onchain events
       eventId: bytes16(0x1234567890abcdef1234567890abcdef),
       payoutAddress: recipient1,
       payoutAmount: publisherAttributedAmount1,
@@ -660,7 +660,7 @@ contract FlywheelCampaignsTest is Test {
     });
 
     events[1] = IFlywheelCampaigns.OnchainEvent({
-      conversionConfigId: 1,
+      conversionConfigId: 2, // Use ONCHAIN config for onchain events
       eventId: bytes16(0x1234567890abcdef1234567890abcdef),
       payoutAddress: recipient2,
       payoutAmount: publisherAttributedAmount2,
@@ -675,7 +675,7 @@ contract FlywheelCampaignsTest is Test {
     });
 
     events[2] = IFlywheelCampaigns.OnchainEvent({
-      conversionConfigId: 1,
+      conversionConfigId: 2, // Use ONCHAIN config for onchain events
       eventId: bytes16(0x1234567890abcdef1234567890abcdef),
       payoutAddress: recipient3,
       payoutAmount: publisherAttributedAmount3,
@@ -1356,7 +1356,7 @@ contract FlywheelCampaignsTest is Test {
 
     FlywheelCampaigns.OnchainEvent[] memory events = new IFlywheelCampaigns.OnchainEvent[](1);
     events[0] = IFlywheelCampaigns.OnchainEvent({
-      conversionConfigId: 1,
+      conversionConfigId: 2, // Use ONCHAIN config for onchain events
       eventId: bytes16(0x1234567890abcdef1234567890abcdef),
       payoutAddress: address(0),
       payoutAmount: attributionAmount,
@@ -1436,7 +1436,7 @@ contract FlywheelCampaignsTest is Test {
 
     FlywheelCampaigns.OnchainEvent[] memory events = new IFlywheelCampaigns.OnchainEvent[](1);
     events[0] = IFlywheelCampaigns.OnchainEvent({
-      conversionConfigId: 1,
+      conversionConfigId: 2, // Use ONCHAIN config for onchain events
       eventId: bytes16(0x1234567890abcdef1234567890abcdef),
       payoutAddress: recipient,
       payoutAmount: attributionAmount,
@@ -1864,9 +1864,9 @@ contract FlywheelCampaignsTest is Test {
     uint256 preClaimBalance = dummyToken.balanceOf(to);
     uint256 preCampaignBalance = dummyToken.balanceOf(campaignBalanceAddress1);
 
-    // Expect ClaimedRewards event to be emitted with correct parameters
+    // Expect ClaimedReward event to be emitted with correct parameters
     vm.expectEmit(true, true, true, true);
-    emit IFlywheelCampaigns.ClaimedRewards(campaignId1, recipient, amount, to);
+    emit IFlywheelCampaigns.ClaimedReward(campaignId1, recipient, amount, to);
 
     fwCampaigns.claimRewards(campaignIds, to);
 
@@ -3013,7 +3013,7 @@ contract FlywheelCampaignsTest is Test {
 
     IFlywheelCampaigns.OnchainEvent[] memory events = new IFlywheelCampaigns.OnchainEvent[](1);
     events[0] = IFlywheelCampaigns.OnchainEvent({
-      conversionConfigId: 1,
+      conversionConfigId: 2, // Use ONCHAIN config for onchain events
       eventId: bytes16(0x1234567890abcdef1234567890abcdef),
       payoutAddress: address(0),
       payoutAmount: attributionAmount,
@@ -3738,7 +3738,7 @@ contract FlywheelCampaignsTest is Test {
     // Try onchain overflow too
     IFlywheelCampaigns.OnchainEvent[] memory overflowOnchainEvents = new IFlywheelCampaigns.OnchainEvent[](1);
     overflowOnchainEvents[0] = IFlywheelCampaigns.OnchainEvent({
-      conversionConfigId: 1,
+      conversionConfigId: 2, // Use ONCHAIN config for onchain events
       eventId: bytes16(0x1234567890abcdef1234567890abcdef),
       payoutAddress: publisher2Address,
       payoutAmount: overflowAmount,
@@ -4083,7 +4083,7 @@ contract FlywheelCampaignsTest is Test {
     // Try onchain attribution with non-existent ref code
     IFlywheelCampaigns.OnchainEvent[] memory onchainEvents = new IFlywheelCampaigns.OnchainEvent[](1);
     onchainEvents[0] = IFlywheelCampaigns.OnchainEvent({
-      conversionConfigId: 1,
+      conversionConfigId: 2, // Use ONCHAIN config for onchain events
       eventId: bytes16(0x1234567890abcdef1234567890abcdef),
       payoutAddress: address(0),
       payoutAmount: 1000,
@@ -4737,5 +4737,190 @@ contract FlywheelCampaignsTest is Test {
     // Verify pending owner is set to zero address
     assertEq(fwCampaigns.pendingOwner(), address(0), "Pending owner should be zero address");
     assertEq(fwCampaigns.owner(), owner, "Original owner should still be owner until acceptOwnership is called");
+  }
+
+  // ========================================
+  // Event Type Validation Tests
+  // ========================================
+
+  /// @notice Test that OFFCHAIN conversion configs work correctly with attributeOffchainEvents
+  function test_eventTypeValidation_offchainEvents_withOffchainConfig_success() public {
+    // Set up campaign in ACTIVE state
+    vm.prank(spdApSigner);
+    fwCampaigns.updateCampaignStatus(campaignId1, IFlywheelCampaigns.CampaignStatus.ACTIVE);
+
+    // Create offchain event using OFFCHAIN conversion config (ID 1)
+    IFlywheelCampaigns.OffchainEvent[] memory events = new IFlywheelCampaigns.OffchainEvent[](1);
+    events[0] = IFlywheelCampaigns.OffchainEvent({
+      conversionConfigId: 1, // OFFCHAIN config - should work
+      eventId: bytes16("event1"),
+      payoutAddress: address(0x123),
+      payoutAmount: 100,
+      recipientType: 2, // user
+      publisherRefCode: publisher1RefCode, // Use valid publisher ref code
+      clickId: "click1",
+      timestamp: uint32(block.timestamp)
+    });
+
+    // This should succeed - OFFCHAIN config with attributeOffchainEvents
+    vm.prank(spdApSigner);
+    fwCampaigns.attributeOffchainEvents(campaignId1, events);
+
+    // Verify attribution was successful
+    assertEq(fwCampaigns.getRecipientBalance(campaignId1, address(0x123)), 100, "Attribution should succeed");
+  }
+
+  /// @notice Test that ONCHAIN conversion configs work correctly with attributeOnchainEvents
+  function test_eventTypeValidation_onchainEvents_withOnchainConfig_success() public {
+    // Set up campaign in ACTIVE state
+    vm.prank(spdApSigner);
+    fwCampaigns.updateCampaignStatus(campaignId1, IFlywheelCampaigns.CampaignStatus.ACTIVE);
+
+    // Create onchain event using ONCHAIN conversion config (ID 2)
+    IFlywheelCampaigns.OnchainEvent[] memory events = new IFlywheelCampaigns.OnchainEvent[](1);
+    events[0] = IFlywheelCampaigns.OnchainEvent({
+      conversionConfigId: 2, // ONCHAIN config - should work
+      eventId: bytes16("event2"),
+      payoutAddress: address(0x456),
+      payoutAmount: 200,
+      recipientType: 2, // user
+      publisherRefCode: publisher2RefCode, // Use valid publisher ref code
+      clickId: "click2",
+      userAddress: address(0x789),
+      timestamp: uint32(block.timestamp),
+      txHash: keccak256("tx1"),
+      txChainId: 1,
+      txEventLogIndex: 0
+    });
+
+    // This should succeed - ONCHAIN config with attributeOnchainEvents
+    vm.prank(spdApSigner);
+    fwCampaigns.attributeOnchainEvents(campaignId1, events);
+
+    // Verify attribution was successful
+    assertEq(fwCampaigns.getRecipientBalance(campaignId1, address(0x456)), 200, "Attribution should succeed");
+  }
+
+  /// @notice Test that ONCHAIN conversion configs fail with attributeOffchainEvents
+  function test_eventTypeValidation_offchainEvents_withOnchainConfig_shouldRevert() public {
+    // Set up campaign in ACTIVE state
+    vm.prank(spdApSigner);
+    fwCampaigns.updateCampaignStatus(campaignId1, IFlywheelCampaigns.CampaignStatus.ACTIVE);
+
+    // Try to use ONCHAIN conversion config (ID 2) with attributeOffchainEvents
+    IFlywheelCampaigns.OffchainEvent[] memory events = new IFlywheelCampaigns.OffchainEvent[](1);
+    events[0] = IFlywheelCampaigns.OffchainEvent({
+      conversionConfigId: 2, // ONCHAIN config - WRONG for offchain events!
+      eventId: bytes16("event3"),
+      payoutAddress: address(0x123),
+      payoutAmount: 100,
+      recipientType: 2, // user
+      publisherRefCode: publisher1RefCode, // Use valid publisher ref code
+      clickId: "click3",
+      timestamp: uint32(block.timestamp)
+    });
+
+    // This should fail - ONCHAIN config with attributeOffchainEvents
+    vm.prank(spdApSigner);
+    vm.expectRevert(IFlywheelCampaigns.InvalidEventType.selector);
+    fwCampaigns.attributeOffchainEvents(campaignId1, events);
+  }
+
+  /// @notice Test that OFFCHAIN conversion configs fail with attributeOnchainEvents
+  function test_eventTypeValidation_onchainEvents_withOffchainConfig_shouldRevert() public {
+    // Set up campaign in ACTIVE state
+    vm.prank(spdApSigner);
+    fwCampaigns.updateCampaignStatus(campaignId1, IFlywheelCampaigns.CampaignStatus.ACTIVE);
+
+    // Try to use OFFCHAIN conversion config (ID 1) with attributeOnchainEvents
+    IFlywheelCampaigns.OnchainEvent[] memory events = new IFlywheelCampaigns.OnchainEvent[](1);
+    events[0] = IFlywheelCampaigns.OnchainEvent({
+      conversionConfigId: 1, // OFFCHAIN config - WRONG for onchain events!
+      eventId: bytes16("event4"),
+      payoutAddress: address(0x456),
+      payoutAmount: 200,
+      recipientType: 2, // user
+      publisherRefCode: publisher2RefCode, // Use valid publisher ref code
+      clickId: "click4",
+      userAddress: address(0x789),
+      timestamp: uint32(block.timestamp),
+      txHash: keccak256("tx2"),
+      txChainId: 1,
+      txEventLogIndex: 0
+    });
+
+    // This should fail - OFFCHAIN config with attributeOnchainEvents
+    vm.prank(spdApSigner);
+    vm.expectRevert(IFlywheelCampaigns.InvalidEventType.selector);
+    fwCampaigns.attributeOnchainEvents(campaignId1, events);
+  }
+
+  /// @notice Test event type validation with multiple events in batch
+  function test_eventTypeValidation_batchEvents_mixedTypes() public {
+    // Set up campaign in ACTIVE state
+    vm.prank(spdApSigner);
+    fwCampaigns.updateCampaignStatus(campaignId1, IFlywheelCampaigns.CampaignStatus.ACTIVE);
+
+    // Create batch of offchain events with mixed config types
+    IFlywheelCampaigns.OffchainEvent[] memory events = new IFlywheelCampaigns.OffchainEvent[](2);
+
+    // First event with valid OFFCHAIN config
+    events[0] = IFlywheelCampaigns.OffchainEvent({
+      conversionConfigId: 1, // OFFCHAIN config - valid
+      eventId: bytes16("event1"),
+      payoutAddress: address(0x111),
+      payoutAmount: 100,
+      recipientType: 2,
+      publisherRefCode: publisher1RefCode, // Use valid publisher ref code
+      clickId: "click1",
+      timestamp: uint32(block.timestamp)
+    });
+
+    // Second event with invalid ONCHAIN config
+    events[1] = IFlywheelCampaigns.OffchainEvent({
+      conversionConfigId: 2, // ONCHAIN config - invalid for offchain events
+      eventId: bytes16("event2"),
+      payoutAddress: address(0x222),
+      payoutAmount: 200,
+      recipientType: 2,
+      publisherRefCode: publisher2RefCode, // Use valid publisher ref code
+      clickId: "click2",
+      timestamp: uint32(block.timestamp)
+    });
+
+    // Should fail on the second event (ONCHAIN config used with offchain attribution)
+    vm.prank(spdApSigner);
+    vm.expectRevert(IFlywheelCampaigns.InvalidEventType.selector);
+    fwCampaigns.attributeOffchainEvents(campaignId1, events);
+
+    // Verify no attributions were processed (transaction should be reverted)
+    assertEq(fwCampaigns.getRecipientBalance(campaignId1, address(0x111)), 0, "No attribution should have occurred");
+    assertEq(fwCampaigns.getRecipientBalance(campaignId1, address(0x222)), 0, "No attribution should have occurred");
+  }
+
+  /// @notice Test event type validation preserves other existing validations
+  function test_eventTypeValidation_preservesOtherValidations() public {
+    // Set up campaign in ACTIVE state
+    vm.prank(spdApSigner);
+    fwCampaigns.updateCampaignStatus(campaignId1, IFlywheelCampaigns.CampaignStatus.ACTIVE);
+
+    // Test that event type validation happens after other validations
+    // Try with non-existent conversion config ID first
+    IFlywheelCampaigns.OffchainEvent[] memory events = new IFlywheelCampaigns.OffchainEvent[](1);
+    events[0] = IFlywheelCampaigns.OffchainEvent({
+      conversionConfigId: 99, // Non-existent conversion config
+      eventId: bytes16("event1"),
+      payoutAddress: address(0x123),
+      payoutAmount: 100,
+      recipientType: 2,
+      publisherRefCode: publisher1RefCode, // Use valid publisher ref code
+      clickId: "click1",
+      timestamp: uint32(block.timestamp)
+    });
+
+    // Should fail with ConversionConfigDoesNotExist, not InvalidEventType
+    vm.prank(spdApSigner);
+    vm.expectRevert(IFlywheelCampaigns.ConversionConfigDoesNotExist.selector);
+    fwCampaigns.attributeOffchainEvents(campaignId1, events);
   }
 }
