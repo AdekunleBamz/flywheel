@@ -3,7 +3,7 @@ terraform {
     scm = {
       # https://github.cbhq.net/terraform/provider-smart-contract-manager/
       source  = "coinbase/smart-contract-manager"
-      version = "~> 0.0.16"
+      version = "~> 0.0.20"
     }
   }
 }
@@ -12,4 +12,5 @@ provider "scm" {
   keychain_url      = "rpc.keychain.us-east-1.development.cbhq.net:8360"
   evm_rpc_url       = "https://base-sepolia.cbhq.net"
   asset_inventory_service_url = "https://asset-inventory-service.cbhq.net:8000"
+  etherscan_base_url = "https://api.etherscan.io/v2"
 }
