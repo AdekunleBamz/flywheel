@@ -34,9 +34,7 @@ abstract contract CampaignHooks {
     /// @param initData Initialization data for the campaign
     ///
     /// @dev Only callable by the flywheel contract
-    function createCampaign(address campaign, bytes calldata initData) external onlyFlywheel {
-        _createCampaign(campaign, initData);
-    }
+    function createCampaign(address campaign, bytes calldata initData) external virtual onlyFlywheel {}
 
     /// @notice Updates the metadata for a campaign
     ///
@@ -44,8 +42,8 @@ abstract contract CampaignHooks {
     /// @param data The data for the campaign
     ///
     /// @dev Only callable by the flywheel contract
-    function updateMetadata(address sender, address campaign, bytes calldata data) external onlyFlywheel {
-        _updateMetadata(sender, campaign, data);
+    function updateMetadata(address sender, address campaign, bytes calldata data) external virtual onlyFlywheel {
+        revert Unimplemented();
     }
 
     /// @notice Processes attribution for a campaign
@@ -58,10 +56,11 @@ abstract contract CampaignHooks {
     /// @dev Only callable by the flywheel contract
     function attribute(address campaign, address attributor, address payoutToken, bytes calldata attributionData)
         external
+        virtual
         onlyFlywheel
         returns (Flywheel.Payout[] memory payouts, uint256 attributorFee)
     {
-        return _attribute(campaign, attributor, payoutToken, attributionData);
+        revert Unimplemented();
     }
 
     /// @notice Returns the URI for a campaign
@@ -69,40 +68,6 @@ abstract contract CampaignHooks {
     /// @param campaign Address of the campaign
     /// @return uri The URI for the campaign
     function campaignURI(address campaign) external view virtual returns (string memory uri) {
-        revert Unimplemented();
-    }
-
-    /// @notice Internal function to create a campaign
-    ///
-    /// @param campaign Address of the campaign
-    /// @param initData Initialization data for the campaign
-    ///
-    /// @dev Override this function in derived contracts
-    function _createCampaign(address campaign, bytes calldata initData) internal virtual {}
-
-    /// @notice Internal function to update the metadata for a campaign
-    ///
-    /// @param campaign Address of the campaign
-    /// @param data The data for the campaign
-    ///
-    /// @dev Override this function in derived contracts
-    function _updateMetadata(address sender, address campaign, bytes calldata data) internal virtual {
-        revert Unimplemented();
-    }
-
-    /// @notice Internal function to process attribution
-    ///
-    /// @param campaign Address of the campaign
-    /// @param payoutToken Address of the token to be distributed
-    /// @param attributionData Encoded attribution data
-    /// @return payouts Array of payouts to be distributed
-    ///
-    /// @dev Override this function in derived contracts
-    function _attribute(address campaign, address attributor, address payoutToken, bytes calldata attributionData)
-        internal
-        virtual
-        returns (Flywheel.Payout[] memory payouts, uint256 attributorFee)
-    {
         revert Unimplemented();
     }
 }

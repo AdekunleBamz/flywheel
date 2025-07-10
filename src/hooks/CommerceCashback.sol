@@ -58,9 +58,10 @@ contract CommerceCashback is CampaignHooks {
     /// @return payouts Array of payouts to be distributed
     ///
     /// @dev Decodes payment information and calculates rewards based on payment amounts
-    function _attribute(address campaign, address attributor, address payoutToken, bytes calldata attributionData)
-        internal
+    function attribute(address campaign, address attributor, address payoutToken, bytes calldata attributionData)
+        external
         override
+        onlyFlywheel
         returns (Flywheel.Payout[] memory payouts, uint256 attributionFee)
     {
         AuthCaptureEscrow.PaymentInfo[] memory payments = abi.decode(attributionData, (AuthCaptureEscrow.PaymentInfo[]));

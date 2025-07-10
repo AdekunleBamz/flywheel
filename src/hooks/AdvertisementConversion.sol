@@ -80,19 +80,20 @@ contract AdvertisementConversion is CampaignHooks {
     constructor(address protocol_) CampaignHooks(protocol_) {}
 
     /// @inheritdoc CampaignHooks
-    function _createCampaign(address campaign, bytes calldata initData) internal override {
+    function createCampaign(address campaign, bytes calldata initData) external override onlyFlywheel {
         campaignURI[campaign] = string(initData);
     }
 
     /// @inheritdoc CampaignHooks
-    function _updateMetadata(address sender, address campaign, bytes calldata data) internal view override {
+    function updateMetadata(address sender, address campaign, bytes calldata data) external override onlyFlywheel {
         if (sender != flywheel.campaignAttributor(campaign)) revert Unauthorized();
     }
 
     /// @inheritdoc CampaignHooks
-    function _attribute(address campaign, address attributor, address payoutToken, bytes calldata attributionData)
-        internal
+    function attribute(address campaign, address attributor, address payoutToken, bytes calldata attributionData)
+        external
         override
+        onlyFlywheel
         returns (Flywheel.Payout[] memory payouts, uint256 attributorFee)
     {
         (Attribution[] memory attributions, uint16 feeBps) = abi.decode(attributionData, (Attribution[], uint16));
