@@ -11,54 +11,50 @@ import {CampaignHooks} from "../CampaignHooks.sol";
 /// @dev Handles both onchain and offchain conversion events
 contract AdvertisementConversion is CampaignHooks {
     /// @notice Attribution structure containing payout and conversion data
-    ///
-    /// @param payout The payout to be distributed
-    /// @param conversion The conversion data
-    /// @param logBytes Empty bytes if offchain conversion, encoded log data if onchain
     struct Attribution {
+        /// @dev The payout to be distributed
         Flywheel.Payout payout;
+        /// @dev The conversion data
         Conversion conversion;
-        bytes logBytes; // empty bytes if offchain conversion
+        /// @dev Empty bytes if offchain conversion, encoded log data if onchain
+        bytes logBytes;
     }
 
     /// @notice Conversion data structure
-    ///
-    /// @param eventId Unique identifier for the conversion event
-    /// @param clickId Click identifier
-    /// @param conversionConfigId Configuration ID for the conversion
-    /// @param publisherRefCode Publisher reference code
-    /// @param timestamp Timestamp of the conversion
-    /// @param recipientType Type of recipient for the conversion
     struct Conversion {
+        /// @dev Unique identifier for the conversion event
         bytes16 eventId;
+        /// @dev Click identifier
         string clickId;
+        /// @dev Configuration ID for the conversion
         uint8 conversionConfigId;
+        /// @dev Publisher reference code
         string publisherRefCode;
+        /// @dev Timestamp of the conversion
         uint32 timestamp;
+        /// @dev Type of recipient for the conversion
         uint8 recipientType;
     }
 
     /// @notice Structure for recording onchain attribution events
-    ///
-    /// @param chainId Chain ID where the transaction occurred
-    /// @param transactionHash Transaction hash where the conversion occurred
-    /// @param index Index of the event log in the transaction
     struct Log {
+        /// @dev Chain ID where the transaction occurred
         uint256 chainId;
+        /// @dev Transaction hash where the conversion occurred
         bytes32 transactionHash;
+        /// @dev Index of the event log in the transaction
         uint256 index;
     }
 
     /// @notice Structure for recording finalization information
-    ///
-    /// @param provider Address of the provider
-    /// @param advertiser Address of the advertiser
-    /// @param finalizationDelay Delay before finalization can occur
-    /// @param attributionDeadline Timestamp when finalization can occur
     struct CampaignState {
+        /// @dev Address of the provider
         address provider;
+        /// @dev Address of the advertiser
         address advertiser;
+        /// @dev Delay before finalization can occur
         uint48 finalizationDelay;
+        /// @dev Timestamp when finalization can occur
         uint48 attributionDeadline;
     }
 
@@ -145,7 +141,7 @@ contract AdvertisementConversion is CampaignHooks {
         external
         override
         onlyFlywheel
-        returns (Flywheel.Payout[] memory payouts, uint256 providerFee)
+        returns (Flywheel.Payout[] memory payouts, uint256 fee)
     {
         (Attribution[] memory attributions, uint16 feeBps) = abi.decode(hookData, (Attribution[], uint16));
         if (feeBps > MAX_BPS) revert InvalidFeeBps(feeBps);
@@ -156,7 +152,7 @@ contract AdvertisementConversion is CampaignHooks {
             // Deduct attribution fee from payout amount
             Flywheel.Payout memory payout = attributions[i].payout;
             uint256 attributionFee = (payout.amount * feeBps) / MAX_BPS;
-            providerFee += attributionFee;
+            fee += attributionFee;
             payouts[i] = Flywheel.Payout({recipient: payout.recipient, amount: payout.amount - attributionFee});
 
             // Emit onchain conversion if logBytes is present, else emit offchain conversion
@@ -168,12 +164,12 @@ contract AdvertisementConversion is CampaignHooks {
                 emit OffchainConversion(campaign, conversion);
             }
         }
-        return (payouts, providerFee);
+        return (payouts, fee);
     }
 
     /// @inheritdoc CampaignHooks
     /// @dev Only advertiser allowed to withdraw funds on finalized campaigns
-    function withdrawFunds(address sender, address campaign, address token, bytes calldata hookData)
+    function withdrawFunds(address sender, address campaign, address token, uint256 amount, bytes calldata hookData)
         external
         view
         override

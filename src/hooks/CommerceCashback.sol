@@ -54,7 +54,7 @@ contract CommerceCashback is CampaignHooks {
         external
         override
         onlyFlywheel
-        returns (Flywheel.Payout[] memory payouts, uint256 attributionFee)
+        returns (Flywheel.Payout[] memory payouts, uint256 fee)
     {
         AuthCaptureEscrow.PaymentInfo[] memory payments = abi.decode(hookData, (AuthCaptureEscrow.PaymentInfo[]));
         address payer = payments[0].payer;

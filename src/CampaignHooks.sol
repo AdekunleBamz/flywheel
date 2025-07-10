@@ -75,7 +75,7 @@ abstract contract CampaignHooks {
         external
         virtual
         onlyFlywheel
-        returns (Flywheel.Payout[] memory payouts, uint256 attributorFee)
+        returns (Flywheel.Payout[] memory payouts, uint256 fee)
     {
         revert Unimplemented();
     }
@@ -88,7 +88,7 @@ abstract contract CampaignHooks {
     /// @param hookData Data for the campaign hook
     ///
     /// @dev Only callable by the flywheel contract
-    function withdrawFunds(address sender, address campaign, address token, bytes calldata hookData)
+    function withdrawFunds(address sender, address campaign, address token, uint256 amount, bytes calldata hookData)
         external
         virtual
         onlyFlywheel

@@ -208,7 +208,7 @@ contract Flywheel {
         CampaignStatus status = _campaigns[campaign].status;
         if (status == CampaignStatus.CREATED || status == CampaignStatus.FINALIZED) revert InvalidCampaignStatus();
 
-        (Payout[] memory newPayouts, uint256 attributionFee) =
+        (Payout[] memory newPayouts, uint256 fee) =
             CampaignHooks(_campaigns[campaign].hooks).attribute(msg.sender, campaign, payoutToken, hookData);
 
         // Add new payouts
@@ -222,11 +222,11 @@ contract Flywheel {
         }
 
         // Add attribution fee
-        fees[payoutToken][msg.sender] += attributionFee;
-        emit FeeAllocated(campaign, payoutToken, msg.sender, attributionFee);
+        fees[payoutToken][msg.sender] += fee;
+        emit FeeAllocated(campaign, payoutToken, msg.sender, fee);
 
         // Transfer tokens to Flywheel to reserve for payouts and fees
-        TokenStore(campaign).sendTokens(payoutToken, address(this), totalPayouts + attributionFee);
+        TokenStore(campaign).sendTokens(payoutToken, address(this), totalPayouts + fee);
     }
 
     /// @notice Allows sponsor to withdraw remaining tokens from a finalized campaign
@@ -234,16 +234,13 @@ contract Flywheel {
     /// @param campaign Address of the campaign
     /// @param token Address of the token to withdraw
     /// @param hookData Data for the campaign hook
-    function withdrawFunds(address campaign, address token, bytes calldata hookData)
+    function withdrawFunds(address campaign, address token, uint256 amount, bytes calldata hookData)
         external
         campaignExists(campaign)
     {
-        CampaignHooks(_campaigns[campaign].hooks).withdrawFunds(msg.sender, campaign, token, hookData);
-
-        // Sweep remaining tokens from campaign to sender
-        uint256 balance = IERC20(token).balanceOf(campaign);
-        TokenStore(campaign).sendTokens(token, msg.sender, balance);
-        emit FundsWithdrawn(campaign, token, msg.sender, balance);
+        CampaignHooks(_campaigns[campaign].hooks).withdrawFunds(msg.sender, campaign, token, amount, hookData);
+        TokenStore(campaign).sendTokens(token, msg.sender, amount);
+        emit FundsWithdrawn(campaign, token, msg.sender, amount);
     }
 
     /// @notice Distributes accumulated balance to a recipient
