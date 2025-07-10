@@ -81,6 +81,12 @@ contract Flywheel {
         address indexed campaign, address sender, CampaignStatus oldStatus, CampaignStatus newStatus
     );
 
+    /// @notice Emitted when a campaign is updated
+    ///
+    /// @param campaign Address of the campaign
+    /// @param uri The URI for the campaign
+    event CampaignMetadataUpdated(address indexed campaign, string uri);
+
     /// @notice Emitted when a payout is attributed to a recipient
 
     /// @param campaign Address of the campaign
@@ -229,6 +235,19 @@ contract Flywheel {
         emit CampaignStatusUpdated(campaign, msg.sender, oldStatus, CampaignStatus.FINALIZED);
     }
 
+    /// @notice Updates the metadata for a campaign
+    ///
+    /// @param campaign Address of the campaign
+    /// @param data The data for the campaign
+    ///
+    /// @dev Only callable by the sponsor of a FINALIZED campaign
+    /// @dev Indexers should update their metadata cache for this campaign by fetching the campaignURI
+    function updateMetadata(address campaign, bytes calldata data) external {
+        if (campaigns[campaign].status != CampaignStatus.FINALIZED) revert InvalidCampaignStatus();
+        CampaignHooks(campaigns[campaign].hooks).updateMetadata(msg.sender, campaign, data);
+        emit CampaignMetadataUpdated(campaign, campaignURI(campaign));
+    }
+
     /// @notice Processes attribution for a campaign
     ///
     /// @param campaign Address of the campaign
@@ -319,8 +338,17 @@ contract Flywheel {
     /// @param campaign Address of the campaign
     ///
     /// @return uri The URI for the campaign
-    function campaignURI(address campaign) external view returns (string memory uri) {
+    function campaignURI(address campaign) public view returns (string memory uri) {
         return CampaignHooks(campaigns[campaign].hooks).campaignURI(campaign);
+    }
+
+    /// @notice Returns the provider of a campaign
+    ///
+    /// @param campaign Address of the campaign
+    ///
+    /// @return attributor The attributor of the campaign
+    function campaignAttributor(address campaign) public view returns (address) {
+        return campaigns[campaign].attributor;
     }
 
     /// @notice Checks if the caller is the sponsor of a campaign
