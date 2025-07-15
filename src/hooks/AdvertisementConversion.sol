@@ -35,6 +35,8 @@ contract AdvertisementConversion is CampaignHooks, Ownable {
         uint32 timestamp;
         /// @dev Type of recipient for the conversion
         uint8 recipientType;
+        /// @dev Amount of the payout for this conversion
+        uint256 payoutAmount;
     }
 
     /// @notice Structure for recording onchain attribution events

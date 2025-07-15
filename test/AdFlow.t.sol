@@ -158,7 +158,8 @@ contract AdFlowTest is Test {
                 conversionConfigId: 1,
                 publisherRefCode: pub1RefCode,
                 timestamp: uint32(block.timestamp),
-                recipientType: 1
+                recipientType: 1,
+                payoutAmount: ATTRIBUTION_AMOUNT
             }),
             logBytes: "" // Offchain conversion
         });
@@ -172,7 +173,8 @@ contract AdFlowTest is Test {
                 conversionConfigId: 1,
                 publisherRefCode: pub2RefCode,
                 timestamp: uint32(block.timestamp),
-                recipientType: 1
+                recipientType: 1,
+                payoutAmount: ATTRIBUTION_AMOUNT
             }),
             logBytes: "" // Offchain conversion
         });
@@ -257,7 +259,8 @@ contract AdFlowTest is Test {
                 conversionConfigId: 1,
                 publisherRefCode: pub1RefCode,
                 timestamp: uint32(block.timestamp),
-                recipientType: 1
+                recipientType: 1,
+                payoutAmount: ATTRIBUTION_AMOUNT
             }),
             logBytes: abi.encode(logData)
         });
@@ -295,7 +298,8 @@ contract AdFlowTest is Test {
                 conversionConfigId: 1,
                 publisherRefCode: pub1RefCode,
                 timestamp: uint32(block.timestamp),
-                recipientType: 1
+                recipientType: 1,
+                payoutAmount: ATTRIBUTION_AMOUNT
             }),
             logBytes: ""
         });
