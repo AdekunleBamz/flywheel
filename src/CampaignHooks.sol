@@ -10,8 +10,8 @@ abstract contract CampaignHooks {
     /// @notice Address of the flywheel contract
     Flywheel public immutable flywheel;
 
-    /// @notice Thrown when a function is not implemented
-    error Unimplemented();
+    /// @notice Thrown when a function is not supported
+    error Unsupported();
 
     /// @notice Modifier to restrict function access to flywheel only
     modifier onlyFlywheel() {
@@ -46,7 +46,7 @@ abstract contract CampaignHooks {
         virtual
         onlyFlywheel
     {
-        revert Unimplemented();
+        revert Unsupported();
     }
 
     /// @notice Updates the campaign status
@@ -64,26 +64,82 @@ abstract contract CampaignHooks {
         Flywheel.CampaignStatus newStatus,
         bytes calldata hookData
     ) external virtual onlyFlywheel {
-        revert Unimplemented();
+        revert Unsupported();
+    }
+
+    /// @notice Processes reward for a campaign
+    ///
+    /// @param sender Address of the sender
+    /// @param campaign Address of the campaign
+    /// @param token Address of the token to be rewarded
+    /// @param hookData Data for the campaign hook
+    ///
+    /// @return payouts Array of payouts to be rewarded
+    /// @return fee Amount of fee to be paid
+    ///
+    /// @dev Only callable by the flywheel contract
+    function onReward(address sender, address campaign, address token, bytes calldata hookData)
+        external
+        virtual
+        onlyFlywheel
+        returns (Flywheel.Payout[] memory payouts, uint256 fee)
+    {
+        revert Unsupported();
     }
 
     /// @notice Processes attribution for a campaign
     ///
     /// @param sender Address of the sender
     /// @param campaign Address of the campaign
-    /// @param payoutToken Address of the token to be distributed
+    /// @param token Address of the token to be distributed
     /// @param hookData Data for the campaign hook
     ///
     /// @return payouts Array of payouts to be distributed
+    /// @return fee Amount of fee to be paid
     ///
     /// @dev Only callable by the flywheel contract
-    function onAllocate(address sender, address campaign, address payoutToken, bytes calldata hookData)
+    function onAllocate(address sender, address campaign, address token, bytes calldata hookData)
         external
         virtual
         onlyFlywheel
         returns (Flywheel.Payout[] memory payouts, uint256 fee)
     {
-        revert Unimplemented();
+        revert Unsupported();
+    }
+
+    /// @notice Distributes payouts for a campaign
+    ///
+    /// @param sender Address of the sender
+    /// @param campaign Address of the campaign
+    /// @param token Address of the token to be distributed
+    /// @param hookData Data for the campaign hook
+    ///
+    /// @return payouts Array of payouts to be distributed
+    /// @return fee Amount of fee to be paid
+    ///
+    /// @dev Only callable by the flywheel contract
+    function onDistribute(address sender, address campaign, address token, bytes calldata hookData)
+        external
+        virtual
+        onlyFlywheel
+        returns (Flywheel.Payout[] memory payouts, uint256 fee)
+    {
+        revert Unsupported();
+    }
+
+    /// @notice Deallocates allocated payouts from a recipient for a campaign
+    ///
+    /// @param sender Address of the sender
+    /// @param campaign Address of the campaign
+    /// @param token Address of the token to deallocate
+    /// @param hookData Data for the campaign hook
+    function onDeallocate(address sender, address campaign, address token, bytes calldata hookData)
+        external
+        virtual
+        onlyFlywheel
+        returns (Flywheel.Payout[] memory payouts)
+    {
+        revert Unsupported();
     }
 
     /// @notice Allows sponsor to withdraw remaining tokens from a finalized campaign
@@ -99,7 +155,7 @@ abstract contract CampaignHooks {
         virtual
         onlyFlywheel
     {
-        revert Unimplemented();
+        revert Unsupported();
     }
 
     /// @notice Returns the URI for a campaign
@@ -107,6 +163,6 @@ abstract contract CampaignHooks {
     /// @param campaign Address of the campaign
     /// @return uri The URI for the campaign
     function campaignURI(address campaign) external view virtual returns (string memory uri) {
-        revert Unimplemented();
+        revert Unsupported();
     }
 }

@@ -299,7 +299,7 @@ contract AdvertisementConversion is CampaignHooks, Ownable {
     }
 
     /// @inheritdoc CampaignHooks
-    function onAllocate(address attributionProvider, address campaign, address payoutToken, bytes calldata hookData)
+    function onReward(address attributionProvider, address campaign, address payoutToken, bytes calldata hookData)
         external
         override
         onlyFlywheel
@@ -371,6 +371,7 @@ contract AdvertisementConversion is CampaignHooks, Ownable {
                 emit OffchainConversionProcessed(campaign, conversion);
             }
         }
+
         return (payouts, fee);
     }
 
