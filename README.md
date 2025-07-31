@@ -2,38 +2,33 @@
 
 # Flywheel Protocol
 
-- A modular, permissionless advertising, rewards and referral protocol built on Base that enables transparent attribution and monetization through a flexible hooks system.
-- Essentially it allows the payout and attribution of any kind of relationship where `User` and or `Publisher` drove an onchain or offchain conversion `X` and gets gets rewarded `Y` for it (in form of ERC20) by Attribution Provider
+TLDR:
+
+- A modular, permissionless protocol for transparent attribution and ERC20 reward distribution
+- Enables any relationship where Users/Publishers drive conversions and get rewarded by Sponsors through various validation mechanisms
+- Flexible hooks system supports diverse campaign types: advertising (AdvertisementConversion), e-commerce cashback (CashbackRewards), and custom rewards (SimpleRewards)
+- Permissionless architecture allows third parties to create custom hooks for any use case
+- Each hook can customize payout models, fee structures, and attribution logic while leveraging the core Flywheel infrastructure for secure token management
 
 ## Overview
 
 Flywheel Protocol creates a decentralized incentive ecosystem where:
 
 - **Sponsors** create campaigns and fund them with tokens (advertisers, platforms, DAOs, etc.)
-- **Publishers (Optional)** drive traffic and earn rewards based on performance (Applicable in case of `AdvertiserConversion.sol` and Spindl/Base Ads)
-- **Attribution Providers** track conversions and submit verified data that triggers payouts to earn fees
-- **Users** can optionally receive incentives for completing desired actions (i.e. get USDC Cashback for purchasing on Shopify)
+- **Publishers (Optional)** drive traffic and earn rewards based on performance (only in AdvertisementConversion campaigns)
+- **Attribution Providers** track conversions and submit verified data that triggers payouts to earn fees (only in AdvertisementConversion campaigns)
+- **Managers** control campaign operations and submit payout data (in CashbackRewards and SimpleRewards campaigns)
+- **Users** can receive incentives for completing desired actions across all campaign types
 
 The protocol uses a modular architecture with hooks, allowing for diverse campaign types without modifying the core protocol.
 
-## Architecture Evolution
+## Architecture
 
-### From Monolithic to Modular
-
-The new Flywheel Protocol represents a complete architectural redesign from the original implementation:
-
-**Old Architecture (Archived)**
-
-- Monolithic `FlywheelCampaigns.sol` contract handling all logic
-- Tightly coupled campaign management and attribution
-- Limited flexibility for new campaign types
-- Complex state management in a single contract
-
-**New Architecture**
+**Core Design Principles**
 
 - Modular design with hooks for extensibility
 - Core `Flywheel.sol` protocol handles only essential functions
-- Campaign-specific logic isolated in hook contracts (i.e. `AdvertisementConversion.sol` and `CommerceCashback.sol` that are derived from `CampaignHooks.sol`)
+- Campaign-specific logic isolated in hook contracts (i.e. `AdvertisementConversion.sol` and `CashbackRewards.sol` that are derived from `CampaignHooks.sol`)
 - Clean separation between protocol and implementation
 
 ## Architecture Diagram
@@ -45,10 +40,10 @@ The diagram above illustrates how the modular Flywheel v1.1 architecture works:
 - **Core Flywheel Contract**: Manages campaign lifecycle and payouts
 - **TokenStore**: Each campaign has its own isolated token store
 - **Attribution Hooks**: Pluggable logic for different campaign types
-- **Publisher Registry**: Optional component for publisher-based campaigns
-- **Participants**: Shows the flow between sponsors, attribution providers, publishers, and users
+- **ReferralCodeRegistry**: Optional component for publisher-based campaigns
+- **Participants**: Shows the flow between sponsors and recipients based on hook-specific validation
 
-### Core Components
+## Core Components
 
 #### 1. **Flywheel.sol** - Core Protocol
 
@@ -83,12 +78,12 @@ Abstract interface that enables:
 - Multi-chain publisher identity
 - Backward compatible with existing publishers
 
-### Hook Examples
+## Hook Examples
 
 - hooks must be derived from `CampaignHooks.sol`
-- for v1, we plan to ship `AdvertisementConversion.sol` and `CommerceCashback.sol` but the system enables anyone to create their own hook permissionlessly (whether internal at Base or external). For instance, internally in near future if we choose to support Solana conversion events or Creator Rewards, we can deploy a new Campaign Hook that fits the specific requirements and utilize `Flywheel` core contract for managing payouts
+- for v1, we ship `AdvertisementConversion.sol`, `CashbackRewards.sol`, and `SimpleRewards.sol` but the system enables anyone to create their own hook permissionlessly (whether internal at Base or external). For instance, internally in near future if we choose to support Solana conversion events or Creator Rewards, we can deploy a new Campaign Hook that fits the specific requirements and utilize `Flywheel` core contract for managing payouts
 
-#### **AdvertisementConversion.sol**
+### **AdvertisementConversion.sol**
 
 Traditional performance marketing campaigns where publishers drive conversions and earn rewards.
 
@@ -132,7 +127,7 @@ bytes memory hookData = abi.encode(
    - Useful when publisher wants specific address for rewards
    - Attribution fee deducted from `payoutAmount`
 
-2. **Publisher Registry Lookup**
+2. **ReferralCodeRegistry Lookup**
 
    ```solidity
    Conversion memory conversion = Conversion({
@@ -147,7 +142,7 @@ bytes memory hookData = abi.encode(
    ```
 
    - When `payoutRecipient = address(0)`, system looks up publisher's payout address
-   - Uses `publisherRegistry.getPublisherPayoutAddress(refCode, chainId)`
+   - Uses `referralCodeRegistry.getPayoutRecipient(refCode)`
    - Allows publishers to manage payout addresses centrally
    - Supports multi-chain publisher identity
 
@@ -218,69 +213,140 @@ bytes memory hookData = abi.encode(
 - Only attribution provider can submit conversions
 - Only advertiser can withdraw remaining funds (when finalized)
 
-#### **CommerceCashback.sol**
+**State Transition Control:**
 
-E-commerce cashback campaigns:
+- **Attribution Provider**: Can perform any valid state transition (including ACTIVE→INACTIVE pause)
+- **Advertiser**: Limited to ACTIVE→FINALIZING and FINALIZING→FINALIZED (after deadline)
+- **Important**: If attribution provider pauses campaign (ACTIVE→INACTIVE), advertiser cannot unpause
+- **Advertiser Recourse**: INACTIVE→FINALIZING→FINALIZED→withdraw funds (campaign permanently ends)
+- **Design Rationale**: Attribution provider has operational control; advertiser has exit rights
 
-- Direct user rewards for purchases
-- Simplified flow without publishers
-- Percentage-based cashback
-- Payment verification through AuthCaptureEscrow
+### **CashbackRewards.sol**
+
+E-commerce cashback campaigns where users receive direct rewards for purchases:
+
+**Core Features:**
+
+- Direct user rewards for purchases (no publishers involved)
+- Uses **allocate/distribute model** (supports all payout functions including reward)
+- Integrates with AuthCaptureEscrow for payment verification
+- Tracks rewards per payment with allocation/distribution states
+- Manager-controlled campaign operations
+
+**Campaign Creation:**
 
 ```solidity
-// Example: Create a 1% cashback campaign for Shopify
 bytes memory hookData = abi.encode(
-    sponsor,           // Shopify or merchant address
-    100,               // 1% cashback (basis points)
-    ... other data TBD
+    manager,          // Campaign manager address
+    "https://api.example.com/metadata/..."  // Campaign metadata URI
 );
 ```
 
-## Attribution Providers
+**Payout Models Supported:**
 
-Attribution Providers are the oracles of the Flywheel ecosystem - they verify that desired actions have occurred and submit this data to earn fees.
+- `reward()` - Immediate payout to users
+- `allocate()` - Reserve rewards for future distribution
+- `distribute()` - Distribute previously allocated rewards
+- `deallocate()` - Cancel allocated rewards
 
-### Role & Responsibilities
+### **SimpleRewards.sol**
 
-1. **Track Conversions**: Monitor onchain and offchain events
-2. **Verify Authenticity**: Ensure conversions are legitimate
-3. **Submit Payouts**: Call reward/allocate operations with proof
-4. **Earn Fees**: Receive compensation for accurate attribution
+Basic rewards hook with minimal logic for flexible campaign types:
 
-### Attribution Provider Examples by Campaign Type
+**Core Features:**
 
-#### Traditional Advertising (Spindl)
+- Simple pass-through of payout data with minimal validation
+- Uses **allocate/distribute model** (supports all payout functions)
+- Manager-controlled campaign operations
+- No complex business logic - pure reward distribution
+- Suitable for custom attribution logic handled externally
 
-- **Tracks**: User conversions from publisher referrals
-- **Verifies**: Click IDs, conversion windows, user actions
-- **Submits**: Both onchain (DEX swaps, NFT mints) and offchain (signups, purchases) events
-- **Fee Model**: Percentage of each conversion (e.g., 1% of payout)
+**Campaign Creation:**
 
 ```solidity
-// Payout submission with immediate reward
 bytes memory hookData = abi.encode(
-    payouts,           // Array of payout recipients and amounts
-    100                // 1% fee in basis points
+    manager          // Campaign manager address
 );
-flywheel.reward(campaign, token, hookData);
 ```
 
-#### E-commerce Cashback (Payment Processor)
+**Use Cases:**
 
-- TBD
+- Custom attribution systems that handle logic externally
+- Simple reward programs without complex validation
+- Prototyping new campaign types before building specialized hooks
+- Backend-controlled reward distribution
 
-### Attribution Provider Permissions
+**Payout Models Supported:**
 
-Each campaign specifies its trusted attribution provider(s):
+- `reward()` - Immediate payout to recipients
+- `allocate()` - Reserve payouts for future distribution
+- `distribute()` - Distribute previously allocated payouts
+- `deallocate()` - Cancel allocated payouts
 
-- **AdvertisementConversion**: Provider set at campaign creation
-- **Custom Hooks**: Flexible provider models (single, multiple, permissionless)
+## Core Payout Operations
 
-### Becoming an Attribution Provider
+Flywheel provides four fundamental payout operations that hooks can implement based on their requirements:
 
-1. **For Existing Hooks**: Contact sponsors to be designated as their provider
-2. **For Custom Hooks**: Build attribution infrastructure for your use case
-3. **Fee Structure**: Negotiate with sponsors (typically 0-10% of rewards). In the case of `AdvertisementConversion.sol` and `CommerceCashback.sol`, it will be 0% for now.
+### **reward()** - Immediate Payout
+
+Transfers tokens directly to recipients immediately. Used for real-time rewards where no holding period is needed.
+
+### **allocate()** - Reserve Future Payout
+
+Reserves tokens for recipients without immediate transfer. Creates a "pending" state that can be claimed later or reversed.
+
+### **distribute()** - Claim Allocated Payout
+
+Allows recipients to claim previously allocated tokens. Converts "pending" allocations to actual token transfers.
+
+### **deallocate()** - Cancel Allocated Payout
+
+Cancels previously allocated tokens, returning them to the campaign treasury. Only works on unclaimed allocations.
+
+## Hook Implementation Comparison
+
+Different hooks implement these operations based on their specific use cases:
+
+| **Aspect**       | **AdvertisementConversion**     | **CashbackRewards**            | **SimpleRewards**             |
+| ---------------- | ------------------------------- | ------------------------------ | ----------------------------- |
+| **Controller**   | Attribution Provider            | Manager                        | Manager                       |
+| **Use Case**     | Publisher performance marketing | E-commerce cashback            | Flexible reward distribution  |
+| **reward()**     | ✅ Immediate publisher payouts  | ✅ Direct user cashback        | ✅ Direct recipient payouts   |
+| **allocate()**   | ❌ Not implemented              | ✅ Reserve cashback for claims | ✅ Reserve payouts for claims |
+| **distribute()** | ❌ Not implemented              | ✅ Users claim cashback        | ✅ Recipients claim rewards   |
+| **deallocate()** | ❌ Not implemented              | ✅ Cancel unclaimed cashback   | ✅ Cancel unclaimed rewards   |
+| **Fees**         | ✅ Attribution provider fees    | ❌ No fees                     | ❌ No fees                    |
+| **Validation**   | Complex (ref codes, configs)    | Medium (payment verification)  | Minimal (pass-through)        |
+| **Publishers**   | ✅ Via ReferralCodeRegistry     | ❌ Direct to users             | ❌ Direct to recipients       |
+
+## Detailed Hook Behaviors
+
+### AdvertisementConversion: Attribution Provider Model
+
+**Who Controls**: Attribution providers verify conversions and submit payouts
+**Payout Flow**: Immediate rewards only - no allocation/distribution needed
+**Validation**: Complex publisher verification, conversion configs, allowlists
+**Fees**: Attribution providers earn percentage-based fees
+
+### CashbackRewards: Manager Model
+
+**Who Controls**: Managers (typically payment processors or platforms)
+**Payout Flow**: Full allocate/distribute model for flexible cashback claims
+**Validation**: Payment verification via AuthCaptureEscrow integration
+**Fees**: No fees - direct cashback to users
+
+### SimpleRewards: Manager Model
+
+**Who Controls**: Managers (typically backend services or trusted controllers)  
+**Payout Flow**: Full allocate/distribute model for maximum flexibility
+**Validation**: Minimal - simple pass-through of payout data
+**Fees**: No fees - pure reward distribution
+
+### Gas Optimization
+
+- TokenStore uses clone pattern (not full deployment) saving ~90% deployment gas
+- Batch attribution submissions supported via arrays
+- Pull-based payout distribution prevents reentrancy
 
 ## Use Case Examples
 
@@ -296,31 +362,38 @@ The modular architecture supports diverse incentive programs:
 ### 2. **E-commerce Cashback**
 
 - **Sponsor**: E-commerce platform (e.g., Shopify or Base)
-- **Attribution Provider**: Payment processor or platform itself
-- **Hook**: `CommerceCashback`
+- **Manager**: Payment processor or platform itself
+- **Hook**: `CashbackRewards`
 - **Flow**: Users make purchases → Payment confirmed → Payouts issued → Users receive cashback
 
-### 3. **Creator Rewards**
+### 3. **Simple Reward Distribution**
+
+- **Sponsor**: Any entity wanting to distribute rewards
+- **Manager**: Backend service or trusted controller
+- **Hook**: `SimpleRewards`
+- **Flow**: Actions tracked externally → Manager submits payout data → Recipients claim rewards
+
+### 4. **Creator Rewards**
 
 - **Sponsor**: Social platform or DAO
 - **Attribution Provider**: TBD
 - **Hook**: Custom creator rewards hook
 - **Flow**: Creators produce content → Engagement tracked → Attribution verified → Creators earn
 
-### 4. **DeFi Incentives**
+### 5. **DeFi Incentives**
 
 - **Sponsor**: DeFi protocol
 - **Attribution Provider**: TBD but could be onchain indexer or protocol itself
 - **Hook**: Custom DeFi activity hook
 - **Flow**: Users perform actions → Blockchain events indexed → Payouts issued → Users earn
 
-### 5. **Other (Example: Gaming Achievements)**
+### 6. **Other (Example: Builder Rewards)**
 
 - We created Flywheel in such a way that others can hook into the architecture quite easily
-- **Sponsor**: Game developer or guild
-- **Attribution Provider**: Game servers or decentralized validators
-- **Hook**: Custom gaming hook
-- **Flow**: Players complete quests → Server verifies → Payouts issued → Rewards distributed
+- **Sponsor**: DAO or protocol
+- **Manager**: Development team or DAO governance
+- **Hook**: Custom builder rewards hook
+- **Flow**: Builders complete milestones → Contributions verified → Payouts issued → Rewards distributed
 
 ## Key Improvements
 
@@ -335,7 +408,7 @@ The modular architecture supports diverse incentive programs:
 - Clone pattern for TokenStore deployment
 - Batch operations for attribution
 - Optimized storage patterns
-- ~50% gas reduction compared to old architecture
+- Significant gas optimization through efficient patterns
 
 ### Flexibility
 
@@ -495,19 +568,22 @@ flywheel.collectFees(campaign, token, feeRecipient);
    - **Actions allowed**: Fund campaign, update metadata
    - **Who can transition to ACTIVE**:
      - **AdvertisementConversion**: Attribution Provider (always), Advertiser (limited)
-     - **CommerceCashback**: Status changes not supported
+     - **CashbackRewards**: Status changes not supported
+     - **SimpleRewards**: Manager-controlled transitions
 
 2. **ACTIVE State**
 
    - **Purpose**: Campaign is live and processing payouts
    - **Payout functions**: All four functions available based on hook implementation
      - **AdvertisementConversion**: Only `reward()` implemented
-     - **CommerceCashback**: `allocate()`, `distribute()`, `deallocate()` implemented
+     - **CashbackRewards**: `reward()`, `allocate()`, `distribute()`, `deallocate()` implemented
+     - **SimpleRewards**: `reward()`, `allocate()`, `distribute()`, `deallocate()` implemented
    - **Who can transition**:
      - **AdvertisementConversion**:
        - Attribution Provider: Can go to ANY state (including back to INACTIVE)
        - Advertiser: Can only go to FINALIZING
-     - **CommerceCashback**: Status changes not supported (campaigns stay ACTIVE)
+     - **CashbackRewards**: Status changes not supported (campaigns stay ACTIVE)
+     - **SimpleRewards**: Manager-controlled transitions
 
 3. **FINALIZING State**
 
@@ -518,14 +594,16 @@ flywheel.collectFees(campaign, token, feeRecipient);
      - **AdvertisementConversion**:
        - Attribution Provider: Can transition immediately
        - Advertiser: Only after attribution deadline passes
-     - **CommerceCashback**: Status changes not supported
+     - **CashbackRewards**: Status changes not supported
+     - **SimpleRewards**: Manager-controlled transitions
 
 4. **FINALIZED State**
    - **Purpose**: Campaign permanently closed
    - **Payout functions**: None available
    - **Fund withdrawal**:
      - **AdvertisementConversion**: Only Advertiser
-     - **CommerceCashback**: Only Manager
+     - **CashbackRewards**: Only Manager
+     - **SimpleRewards**: Only Manager
 
 ### Role Definitions by Hook Type
 
@@ -533,12 +611,17 @@ flywheel.collectFees(campaign, token, feeRecipient);
 
 - **Advertiser**: Campaign sponsor who funds the campaign
 - **Attribution Provider**: Authorized to submit conversion data and earn fees
-- **Publishers**: Earn rewards based on conversions (managed via PublisherRegistry)
+- **Publishers**: Earn rewards based on conversions (managed via ReferralCodeRegistry)
 
-#### CommerceCashback Campaigns
+#### CashbackRewards Campaigns
 
 - **Manager**: Controls campaign lifecycle and processes payment-based rewards
 - **Users**: Receive cashback rewards directly (no publishers involved)
+
+#### SimpleRewards Campaigns
+
+- **Manager**: Controls all campaign operations and payout submissions
+- **Recipients**: Receive rewards based on manager-submitted payout data
 
 ## Creating Custom Hooks
 
@@ -601,35 +684,19 @@ contract MyCustomHook is CampaignHooks {
 }
 ```
 
-## Migration from Old Protocol
-
-For users familiar with the old FlywheelCampaigns contract:
-
-| Old System                           | New System                                                         |
-| ------------------------------------ | ------------------------------------------------------------------ |
-| `FlywheelCampaigns.createCampaign()` | `Flywheel.createCampaign()` with hooks                             |
-| `CampaignBalance` contracts          | `TokenStore` contracts                                             |
-| `attribute()` function               | `reward()`, `allocate()`, `distribute()`, `deallocate()` functions |
-| Fixed attribution logic              | Customizable via hooks                                             |
-| Monolithic contract                  | Modular architecture                                               |
-| Campaign configs in main contract    | Campaign logic in hooks                                            |
-| Single attribution provider model    | Flexible provider configuration per hook                           |
-
-Publishers registered in the old system remain compatible with the new architecture through the shared `ReferralCodeRegistry`.
-
 ## Protocol Participants
 
 ### Sponsors
 
 - Fund campaigns (advertisers, platforms, DAOs, protocols)
-- Configure attribution rules via hooks
-- Set trusted attribution providers
+- Configure campaign rules via hooks
+- Set trusted controllers (attribution providers for AdvertisementConversion, managers for other hooks)
 - Monitor campaign performance
 - Withdraw unused funds
 
 ### Publishers
 
-- Register via PublisherRegistry
+- Register via ReferralCodeRegistry
 - Drive traffic using ref codes
 - Claim accumulated rewards
 - View earnings across campaigns
@@ -659,7 +726,7 @@ Publishers registered in the old system remain compatible with the new architect
 
 ## Audits
 
-The new modular architecture is currently undergoing audit. The previous monolithic version was audited by Macro in November 2023.
+The modular architecture is currently undergoing audit.
 
 ## Deployment
 
@@ -670,7 +737,7 @@ The protocol is designed for deployment on Ethereum L2s and can technically be d
 Foundry deployment scripts are available in the `scripts/` directory for deploying all protocol contracts:
 
 - **`DeployFlywheel.s.sol`** - Deploys the core Flywheel contract
-- **`DeployPublisherRegistry.s.sol`** - Deploys the upgradeable PublisherRegistry with proxy
+- **`DeployPublisherRegistry.s.sol`** - Deploys the upgradeable ReferralCodeRegistry with proxy
 - **`DeployAdvertisementConversion.s.sol`** - Deploys the AdvertisementConversion hook
 - **`DeployAll.s.sol`** - Orchestrates deployment of all contracts in the correct order
 
@@ -682,7 +749,7 @@ Foundry deployment scripts are available in the `scripts/` directory for deployi
 
 All deployment scripts require an owner address that will have administrative control over the deployed contracts. This address will be able to:
 
-- Upgrade the PublisherRegistry contract (via UUPS proxy)
+- Upgrade the ReferralCodeRegistry contract (via UUPS proxy)
 - Configure protocol parameters
 - Manage contract permissions
 
@@ -715,7 +782,7 @@ source .env
 
 #### Signer Address (Optional)
 
-The PublisherRegistry supports an optional "signer" address that can:
+The ReferralCodeRegistry supports an optional "signer" address that can:
 
 - Register publishers with custom ref codes (instead of auto-generated ones)
 - Register publishers on behalf of others
@@ -754,10 +821,10 @@ forge script scripts/DeployAll.s.sol --sig "run(address,address)" 0x7116F87D6ff2
 # Deploy only Flywheel (no owner parameter needed)
 forge script scripts/DeployFlywheel.s.sol --rpc-url https://sepolia.base.org --private-key $PRIVATE_KEY --broadcast --verify
 
-# Deploy only PublisherRegistry with owner
+# Deploy only ReferralCodeRegistry with owner
 forge script scripts/DeployPublisherRegistry.s.sol --sig "run(address)" OWNER_ADDRESS --rpc-url https://sepolia.base.org --private-key $PRIVATE_KEY --broadcast --verify
 
-# Deploy only PublisherRegistry with owner and signer
+# Deploy only ReferralCodeRegistry with owner and signer
 forge script scripts/DeployPublisherRegistry.s.sol --sig "run(address,address)" OWNER_ADDRESS SIGNER_ADDRESS --rpc-url https://sepolia.base.org --private-key $PRIVATE_KEY --broadcast --verify
 ```
 
@@ -766,14 +833,14 @@ forge script scripts/DeployPublisherRegistry.s.sol --sig "run(address,address)" 
 The scripts handle dependencies automatically, but the deployment order is:
 
 1. **Flywheel** (independent)
-2. **PublisherRegistry** (independent, upgradeable via UUPS proxy)
-3. **AdvertisementConversion** (requires Flywheel and PublisherRegistry addresses)
+2. **ReferralCodeRegistry** (independent, upgradeable via UUPS proxy)
+3. **AdvertisementConversion** (requires Flywheel and ReferralCodeRegistry addresses)
 
 ### Contract Ownership
 
 The owner address is specified during deployment and will have administrative control over:
 
-- **PublisherRegistry**: Can upgrade the contract via UUPS proxy pattern
+- **ReferralCodeRegistry**: Can upgrade the contract via UUPS proxy pattern
 - **AdvertisementConversion**: Can configure protocol parameters and manage permissions
 
 **Important**: Choose your owner address carefully as it will have significant control over the protocol. Consider using a multisig wallet for production deployments.
@@ -783,6 +850,6 @@ The owner address is specified during deployment and will have administrative co
 After deployment, you'll receive addresses for:
 
 - **Flywheel**: Core protocol contract
-- **PublisherRegistry**: Publisher management (proxy address)
+- **ReferralCodeRegistry**: Publisher management (proxy address)
 - **AdvertisementConversion**: Hook for ad campaigns
 - **TokenStore Implementation**: Template for campaign treasuries (auto-deployed by Flywheel)
