@@ -5,11 +5,11 @@ import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-import {Flywheel} from "../src/Flywheel.sol";
-import {ReferralCodeRegistry} from "../src/ReferralCodeRegistry.sol";
-import {AdvertisementConversion} from "../src/hooks/AdvertisementConversion.sol";
-import {DummyERC20} from "./mocks/DummyERC20.sol";
-import {TokenStore} from "../src/TokenStore.sol";
+import {Flywheel} from "../../src/Flywheel.sol";
+import {ReferralCodeRegistry} from "../../src/ReferralCodeRegistry.sol";
+import {AdvertisementConversion} from "../../src/hooks/AdvertisementConversion.sol";
+import {DummyERC20} from "../mocks/DummyERC20.sol";
+import {TokenStore} from "../../src/TokenStore.sol";
 
 contract AdFlowTest is Test {
     // Contracts
@@ -94,14 +94,13 @@ contract AdFlowTest is Test {
         string[] memory allowedRefCodes = new string[](0);
 
         // Create conversion configs
-        AdvertisementConversion.ConversionConfig[] memory configs = new AdvertisementConversion.ConversionConfig[](2);
-        configs[0] = AdvertisementConversion.ConversionConfig({
-            isActive: true,
+        AdvertisementConversion.ConversionConfigInput[] memory configs =
+            new AdvertisementConversion.ConversionConfigInput[](2);
+        configs[0] = AdvertisementConversion.ConversionConfigInput({
             isEventOnchain: false,
             conversionMetadataUrl: "https://campaign.com/offchain-metadata"
         });
-        configs[1] = AdvertisementConversion.ConversionConfig({
-            isActive: true,
+        configs[1] = AdvertisementConversion.ConversionConfigInput({
             isEventOnchain: true,
             conversionMetadataUrl: "https://campaign.com/onchain-metadata"
         });
@@ -298,17 +297,26 @@ contract AdFlowTest is Test {
 
     function test_conversionConfigManagement() public {
         // Test adding a new conversion config
-        AdvertisementConversion.ConversionConfig memory newConfig = AdvertisementConversion.ConversionConfig({
-            isActive: true,
-            isEventOnchain: false,
-            conversionMetadataUrl: "https://campaign.com/new-config-metadata"
-        });
-
         // Only advertiser can add conversion configs
         vm.startPrank(advertiser);
         vm.expectEmit(true, true, false, true);
-        emit AdvertisementConversion.ConversionConfigAdded(campaign, 3, newConfig);
-        adHook.addConversionConfig(campaign, newConfig);
+        // The emitted config will have isActive: true
+        emit AdvertisementConversion.ConversionConfigAdded(
+            campaign,
+            3,
+            AdvertisementConversion.ConversionConfig({
+                isActive: true,
+                isEventOnchain: false,
+                conversionMetadataUrl: "https://campaign.com/new-config-metadata"
+            })
+        );
+        adHook.addConversionConfig(
+            campaign,
+            AdvertisementConversion.ConversionConfigInput({
+                isEventOnchain: false,
+                conversionMetadataUrl: "https://campaign.com/new-config-metadata"
+            })
+        );
         vm.stopPrank();
 
         // Verify the new config was added
@@ -331,7 +339,13 @@ contract AdFlowTest is Test {
         // Test that unauthorized users cannot manage configs
         vm.startPrank(makeAddr("unauthorized"));
         vm.expectRevert(AdvertisementConversion.Unauthorized.selector);
-        adHook.addConversionConfig(campaign, newConfig);
+        adHook.addConversionConfig(
+            campaign,
+            AdvertisementConversion.ConversionConfigInput({
+                isEventOnchain: false,
+                conversionMetadataUrl: "https://campaign.com/unauthorized-config"
+            })
+        );
 
         vm.expectRevert(AdvertisementConversion.Unauthorized.selector);
         adHook.disableConversionConfig(campaign, 2);

@@ -2,10 +2,10 @@
 pragma solidity 0.8.29;
 
 import {Test} from "forge-std/Test.sol";
-import {Flywheel} from "../../src/Flywheel.sol";
-import {ReferralCodeRegistry} from "../../src/ReferralCodeRegistry.sol";
-import {AdvertisementConversion} from "../../src/hooks/AdvertisementConversion.sol";
-import {DummyERC20} from "../mocks/DummyERC20.sol";
+import {Flywheel} from "../../../src/Flywheel.sol";
+import {ReferralCodeRegistry} from "../../../src/ReferralCodeRegistry.sol";
+import {AdvertisementConversion} from "../../../src/hooks/AdvertisementConversion.sol";
+import {DummyERC20} from "../../mocks/DummyERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract AdBatchRewardsTest is Test {
@@ -60,19 +60,17 @@ contract AdBatchRewardsTest is Test {
         token = new DummyERC20(initialHolders);
 
         // Create campaign with 3 conversion configs (2 onchain, 1 offchain)
-        AdvertisementConversion.ConversionConfig[] memory configs = new AdvertisementConversion.ConversionConfig[](3);
-        configs[0] = AdvertisementConversion.ConversionConfig({
-            isActive: true,
+        AdvertisementConversion.ConversionConfigInput[] memory configs =
+            new AdvertisementConversion.ConversionConfigInput[](3);
+        configs[0] = AdvertisementConversion.ConversionConfigInput({
             isEventOnchain: true,
             conversionMetadataUrl: ONCHAIN_CONFIG_1_URL
         });
-        configs[1] = AdvertisementConversion.ConversionConfig({
-            isActive: true,
+        configs[1] = AdvertisementConversion.ConversionConfigInput({
             isEventOnchain: true,
             conversionMetadataUrl: ONCHAIN_CONFIG_2_URL
         });
-        configs[2] = AdvertisementConversion.ConversionConfig({
-            isActive: true,
+        configs[2] = AdvertisementConversion.ConversionConfigInput({
             isEventOnchain: false,
             conversionMetadataUrl: OFFCHAIN_CONFIG_1_URL
         });
@@ -264,19 +262,17 @@ contract AdBatchRewardsTest is Test {
         }
 
         // Create a new campaign that allows all publishers (empty allowedRefCodes = allow all)
-        AdvertisementConversion.ConversionConfig[] memory configs = new AdvertisementConversion.ConversionConfig[](3);
-        configs[0] = AdvertisementConversion.ConversionConfig({
-            isActive: true,
+        AdvertisementConversion.ConversionConfigInput[] memory configs =
+            new AdvertisementConversion.ConversionConfigInput[](3);
+        configs[0] = AdvertisementConversion.ConversionConfigInput({
             isEventOnchain: true,
             conversionMetadataUrl: ONCHAIN_CONFIG_1_URL
         });
-        configs[1] = AdvertisementConversion.ConversionConfig({
-            isActive: true,
+        configs[1] = AdvertisementConversion.ConversionConfigInput({
             isEventOnchain: true,
             conversionMetadataUrl: ONCHAIN_CONFIG_2_URL
         });
-        configs[2] = AdvertisementConversion.ConversionConfig({
-            isActive: true,
+        configs[2] = AdvertisementConversion.ConversionConfigInput({
             isEventOnchain: false,
             conversionMetadataUrl: OFFCHAIN_CONFIG_1_URL
         });
@@ -373,19 +369,17 @@ contract AdBatchRewardsTest is Test {
         uint256 numEvents = 1000;
 
         // Create a new campaign that allows all publishers
-        AdvertisementConversion.ConversionConfig[] memory configs = new AdvertisementConversion.ConversionConfig[](3);
-        configs[0] = AdvertisementConversion.ConversionConfig({
-            isActive: true,
+        AdvertisementConversion.ConversionConfigInput[] memory configs =
+            new AdvertisementConversion.ConversionConfigInput[](3);
+        configs[0] = AdvertisementConversion.ConversionConfigInput({
             isEventOnchain: true,
             conversionMetadataUrl: ONCHAIN_CONFIG_1_URL
         });
-        configs[1] = AdvertisementConversion.ConversionConfig({
-            isActive: true,
+        configs[1] = AdvertisementConversion.ConversionConfigInput({
             isEventOnchain: true,
             conversionMetadataUrl: ONCHAIN_CONFIG_2_URL
         });
-        configs[2] = AdvertisementConversion.ConversionConfig({
-            isActive: true,
+        configs[2] = AdvertisementConversion.ConversionConfigInput({
             isEventOnchain: false,
             conversionMetadataUrl: OFFCHAIN_CONFIG_1_URL
         });
