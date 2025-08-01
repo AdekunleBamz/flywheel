@@ -20,49 +20,49 @@ contract CrossHookSecurityTest is Test {
     Flywheel public flywheel;
     ReferralCodeRegistry public publisherRegistry;
     AuthCaptureEscrow public escrow;
-    
+
     // Hook contracts
     AdvertisementConversion public adHook;
     BuyerRewards public buyerHook;
     SimpleRewards public simpleHook;
-    
+
     // Tokens
     DummyERC20 public paymentToken; // USDC-like
-    DummyERC20 public rewardToken;  // Platform token
-    DummyERC20 public bonusToken;   // Bonus rewards
-    
+    DummyERC20 public rewardToken; // Platform token
+    DummyERC20 public bonusToken; // Bonus rewards
+
     // Test accounts
     address public owner = makeAddr("owner");
     address public signer = makeAddr("signer");
-    
+
     // AdvertisementConversion actors
     address public advertiser = makeAddr("advertiser");
     address public attributionProvider = makeAddr("attributionProvider");
     address public publisher1 = makeAddr("publisher1");
     address public publisher2 = makeAddr("publisher2");
-    
+
     // BuyerRewards actors
     address public ecommerceOwner = makeAddr("ecommerceOwner");
     address public paymentManager = makeAddr("paymentManager");
     address public buyer1 = makeAddr("buyer1");
     address public buyer2 = makeAddr("buyer2");
-    
+
     // SimpleRewards actors
     address public daoManager = makeAddr("daoManager");
     address public contributor1 = makeAddr("contributor1");
     address public contributor2 = makeAddr("contributor2");
-    
-    // Security test actors  
+
+    // Security test actors
     address public attacker = makeAddr("attacker");
     address public victim = makeAddr("victim");
     address public merchant = makeAddr("merchant");
-    
+
     // Legacy variable mappings for security tests
     address public simpleRewardsManager = daoManager;
     address public buyerRewardsManager = paymentManager;
     address public manager = owner;
     DummyERC20 public token; // Alias for security tests
-    
+
     // Campaign addresses
     address public adCampaign;
     address public buyerCampaign;
@@ -74,7 +74,7 @@ contract CrossHookSecurityTest is Test {
     uint256 public constant CASHBACK_AMOUNT = 500e18;
     uint256 public constant DAO_REWARD = 2000e18;
     uint16 public constant ATTRIBUTION_FEE_BPS = 500; // 5%
-    
+
     // Security test constants
     uint256 public constant INITIAL_TOKEN_BALANCE = 1000e18;
     uint256 public constant ATTACK_AMOUNT = 100e18;
@@ -82,16 +82,16 @@ contract CrossHookSecurityTest is Test {
     function setUp() public {
         // Deploy tokens with proper initial distributions
         _deployTokens();
-        
+
         // Deploy core infrastructure
         _deployCoreContracts();
-        
+
         // Deploy hooks
         _deployHooks();
-        
+
         // Setup campaigns
         _setupCampaigns();
-        
+
         console.log("Cross-hook security & integration test setup complete");
         console.log("AdvertisementConversion campaign:", adCampaign);
         console.log("BuyerRewards campaign:", buyerCampaign);
@@ -104,7 +104,7 @@ contract CrossHookSecurityTest is Test {
         paymentHolders[0] = buyer1;
         paymentHolders[1] = buyer2;
         paymentHolders[2] = paymentManager;
-        
+
         // Deploy reward tokens for campaign owners/funders + security test accounts
         address[] memory rewardHolders = new address[](6);
         rewardHolders[0] = advertiser;
@@ -112,42 +112,38 @@ contract CrossHookSecurityTest is Test {
         rewardHolders[2] = daoManager;
         rewardHolders[3] = owner;
         rewardHolders[4] = attacker; // For security tests
-        rewardHolders[5] = victim;   // For security tests
-        
+        rewardHolders[5] = victim; // For security tests
+
         paymentToken = new DummyERC20(paymentHolders);
         rewardToken = new DummyERC20(rewardHolders);
         bonusToken = new DummyERC20(rewardHolders);
     }
-    
+
     function _deployCoreContracts() internal {
         // Deploy Flywheel
         flywheel = new Flywheel();
-        
+
         // Deploy publisher registry
         ReferralCodeRegistry impl = new ReferralCodeRegistry();
-        bytes memory initData = abi.encodeWithSelector(
-            ReferralCodeRegistry.initialize.selector,
-            owner,
-            signer
-        );
+        bytes memory initData = abi.encodeWithSelector(ReferralCodeRegistry.initialize.selector, owner, signer);
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
         publisherRegistry = ReferralCodeRegistry(address(proxy));
-        
+
         // Deploy AuthCaptureEscrow
         escrow = new AuthCaptureEscrow();
     }
-    
+
     function _deployHooks() internal {
         // Deploy AdvertisementConversion hook
         adHook = new AdvertisementConversion(address(flywheel), owner, address(publisherRegistry));
-        
+
         // Deploy BuyerRewards hook
         buyerHook = new BuyerRewards(address(flywheel), address(escrow));
-        
+
         // Deploy SimpleRewards hook
         simpleHook = new SimpleRewards(address(flywheel));
     }
-    
+
     function _setupCampaigns() internal {
         // Register publishers for ad campaign
         vm.startPrank(owner);
@@ -155,68 +151,65 @@ contract CrossHookSecurityTest is Test {
         publisherRegistry.registerCustom("PUB2", publisher2, publisher2, "https://pub2.com");
         publisherRegistry.registerCustom("VICTIM", victim, victim, "https://victim.com"); // For security tests
         vm.stopPrank();
-        
+
         // Create AdvertisementConversion campaign
         string[] memory allowedRefCodes = new string[](0);
-        AdvertisementConversion.ConversionConfigInput[] memory configs = 
+        AdvertisementConversion.ConversionConfigInput[] memory configs =
             new AdvertisementConversion.ConversionConfigInput[](1);
         configs[0] = AdvertisementConversion.ConversionConfigInput({
             isEventOnchain: false,
             conversionMetadataUrl: "https://ad-campaign.com/metadata"
         });
-        
-        bytes memory adHookData = abi.encode(
-            attributionProvider, advertiser, "https://ad-campaign.com", allowedRefCodes, configs
-        );
+
+        bytes memory adHookData =
+            abi.encode(attributionProvider, advertiser, "https://ad-campaign.com", allowedRefCodes, configs);
         adCampaign = flywheel.createCampaign(address(adHook), 1, adHookData);
-        
+
         // Create BuyerRewards campaign
-        bytes memory buyerHookData = abi.encode(
-            ecommerceOwner, paymentManager, "https://ecommerce.com/cashback"
-        );
+        bytes memory buyerHookData = abi.encode(ecommerceOwner, paymentManager, "https://ecommerce.com/cashback");
         buyerCampaign = flywheel.createCampaign(address(buyerHook), 2, buyerHookData);
-        
+
         // Create SimpleRewards campaign
         bytes memory simpleHookData = abi.encode(daoManager);
         simpleCampaign = flywheel.createCampaign(address(simpleHook), 3, simpleHookData);
-        
+
         // Fund all campaigns
         vm.startPrank(advertiser);
         rewardToken.transfer(adCampaign, CAMPAIGN_FUNDING);
         vm.stopPrank();
-        
+
         vm.startPrank(ecommerceOwner);
         rewardToken.transfer(buyerCampaign, CAMPAIGN_FUNDING);
         vm.stopPrank();
-        
+
         vm.startPrank(daoManager);
         rewardToken.transfer(simpleCampaign, CAMPAIGN_FUNDING);
         bonusToken.transfer(simpleCampaign, CAMPAIGN_FUNDING / 2);
         vm.stopPrank();
-        
+
         // Set attribution fee
         vm.prank(attributionProvider);
         adHook.setAttributionProviderFee(ATTRIBUTION_FEE_BPS);
-        
+
         // Activate all campaigns for security tests
         vm.prank(paymentManager);
         flywheel.updateStatus(buyerCampaign, Flywheel.CampaignStatus.ACTIVE, "");
-        
+
         vm.prank(daoManager);
         flywheel.updateStatus(simpleCampaign, Flywheel.CampaignStatus.ACTIVE, "");
-        
+
         vm.prank(attributionProvider);
         flywheel.updateStatus(adCampaign, Flywheel.CampaignStatus.ACTIVE, "");
-        
+
         // Initialize legacy alias for security tests
         token = rewardToken;
     }
-    
+
     // Helper functions for BuyerRewards payment simulation
-    function _createPaymentInfo(address payer, address payee, uint256 amount, bytes32 salt) 
-        internal 
-        view 
-        returns (AuthCaptureEscrow.PaymentInfo memory) 
+    function _createPaymentInfo(address payer, address payee, uint256 amount, bytes32 salt)
+        internal
+        view
+        returns (AuthCaptureEscrow.PaymentInfo memory)
     {
         return AuthCaptureEscrow.PaymentInfo({
             operator: paymentManager,
@@ -233,7 +226,7 @@ contract CrossHookSecurityTest is Test {
             salt: uint256(salt)
         });
     }
-    
+
     function _simulatePayment(AuthCaptureEscrow.PaymentInfo memory paymentInfo, bytes32 paymentHash) internal {
         // Mock escrow.getHash to return our expected hash
         vm.mockCall(
@@ -256,16 +249,15 @@ contract CrossHookSecurityTest is Test {
 
     function test_crossHookCampaignComparison() public {
         // Test that different hook types work independently and correctly
-        
+
         // Campaigns are already active from setUp()
         // Verify all campaigns are active
         assertEq(uint8(flywheel.campaignStatus(adCampaign)), uint8(Flywheel.CampaignStatus.ACTIVE));
         assertEq(uint8(flywheel.campaignStatus(buyerCampaign)), uint8(Flywheel.CampaignStatus.ACTIVE));
         assertEq(uint8(flywheel.campaignStatus(simpleCampaign)), uint8(Flywheel.CampaignStatus.ACTIVE));
-        
+
         // Test AdvertisementConversion: Publisher earnings
-        AdvertisementConversion.Attribution[] memory attributions = 
-            new AdvertisementConversion.Attribution[](1);
+        AdvertisementConversion.Attribution[] memory attributions = new AdvertisementConversion.Attribution[](1);
         attributions[0] = AdvertisementConversion.Attribution({
             conversion: AdvertisementConversion.Conversion({
                 eventId: bytes16(uint128(1)),
@@ -278,82 +270,80 @@ contract CrossHookSecurityTest is Test {
             }),
             logBytes: ""
         });
-        
+
         vm.prank(attributionProvider);
         flywheel.reward(adCampaign, address(rewardToken), abi.encode(attributions));
-        
+
         uint256 expectedAdPayout = AD_PAYOUT - (AD_PAYOUT * ATTRIBUTION_FEE_BPS / 10000);
         assertEq(rewardToken.balanceOf(publisher1), expectedAdPayout);
-        
+
         // Test BuyerRewards: Cashback system
         bytes32 paymentHash = keccak256(abi.encodePacked("payment_1", buyer1));
-        
-        AuthCaptureEscrow.PaymentInfo memory paymentInfo = _createPaymentInfo(buyer1, makeAddr("merchant"), 10000e6, paymentHash);
+
+        AuthCaptureEscrow.PaymentInfo memory paymentInfo =
+            _createPaymentInfo(buyer1, makeAddr("merchant"), 10000e6, paymentHash);
         _simulatePayment(paymentInfo, paymentHash);
-        
+
         bytes memory buyerRewardData = abi.encode(paymentInfo, CASHBACK_AMOUNT);
-        
+
         vm.prank(paymentManager);
         flywheel.reward(buyerCampaign, address(rewardToken), buyerRewardData);
-        
+
         assertEq(rewardToken.balanceOf(buyer1), CASHBACK_AMOUNT);
-        
+
         // Test SimpleRewards: DAO contribution rewards
         Flywheel.Payout[] memory daoPayouts = new Flywheel.Payout[](1);
-        daoPayouts[0] = Flywheel.Payout({
-            recipient: contributor1,
-            amount: DAO_REWARD,
-            extraData: "code-contribution-pr-123"
-        });
-        
+        daoPayouts[0] =
+            Flywheel.Payout({recipient: contributor1, amount: DAO_REWARD, extraData: "code-contribution-pr-123"});
+
         vm.prank(daoManager);
         flywheel.reward(simpleCampaign, address(rewardToken), abi.encode(daoPayouts));
-        
+
         assertEq(rewardToken.balanceOf(contributor1), DAO_REWARD);
-        
+
         console.log("Cross-hook campaign comparison completed successfully:");
         console.log("- Publisher1 ad earnings:", expectedAdPayout);
         console.log("- Buyer1 cashback:", CASHBACK_AMOUNT);
         console.log("- Contributor1 DAO reward:", DAO_REWARD);
     }
-    
+
     function test_hookInteroperabilityValidation() public {
         // Test that hooks don't interfere with each other
-        
+
         // Campaigns are already ACTIVE from setUp(), so skip activation
-        
+
         // Test that AdvertisementConversion controls don't affect other campaigns
         vm.expectRevert(); // Should fail - attribution provider has no control over buyer campaign
         vm.prank(attributionProvider);
         flywheel.updateStatus(buyerCampaign, Flywheel.CampaignStatus.INACTIVE, "");
-        
+
         vm.expectRevert(); // Should fail - attribution provider has no control over simple campaign
         vm.prank(attributionProvider);
         flywheel.updateStatus(simpleCampaign, Flywheel.CampaignStatus.INACTIVE, "");
-        
+
         // Test that BuyerRewards controls don't affect other campaigns
         vm.expectRevert(); // Should fail - payment manager has no control over ad campaign
         vm.prank(paymentManager);
         flywheel.updateStatus(adCampaign, Flywheel.CampaignStatus.INACTIVE, "");
-        
+
         vm.expectRevert(); // Should fail - payment manager has no control over simple campaign
         vm.prank(paymentManager);
         flywheel.updateStatus(simpleCampaign, Flywheel.CampaignStatus.INACTIVE, "");
-        
+
         // Test that SimpleRewards controls don't affect other campaigns
         vm.expectRevert(); // Should fail - DAO manager has no control over ad campaign
         vm.prank(daoManager);
         flywheel.updateStatus(adCampaign, Flywheel.CampaignStatus.INACTIVE, "");
-        
+
         vm.expectRevert(); // Should fail - DAO manager has no control over buyer campaign
         vm.prank(daoManager);
         flywheel.updateStatus(buyerCampaign, Flywheel.CampaignStatus.INACTIVE, "");
-        
+
         // Verify all campaigns are still active (no unauthorized changes)
         assertEq(uint8(flywheel.campaignStatus(adCampaign)), uint8(Flywheel.CampaignStatus.ACTIVE));
         assertEq(uint8(flywheel.campaignStatus(buyerCampaign)), uint8(Flywheel.CampaignStatus.ACTIVE));
         assertEq(uint8(flywheel.campaignStatus(simpleCampaign)), uint8(Flywheel.CampaignStatus.ACTIVE));
-        
+
         console.log("Hook interoperability validation completed - all hooks properly isolated");
     }
 
@@ -398,11 +388,7 @@ contract CrossHookSecurityTest is Test {
     function test_security_attributionProviderCrossHookAbuse() public {
         // Attribution provider tries to control non-ad campaigns
         Flywheel.Payout[] memory payouts = new Flywheel.Payout[](1);
-        payouts[0] = Flywheel.Payout({
-            recipient: attacker,
-            amount: ATTACK_AMOUNT,
-            extraData: ""
-        });
+        payouts[0] = Flywheel.Payout({recipient: attacker, amount: ATTACK_AMOUNT, extraData: ""});
         bytes memory hookData = abi.encode(payouts);
 
         // Attribution provider should NOT control SimpleRewards
@@ -444,11 +430,7 @@ contract CrossHookSecurityTest is Test {
 
         // Drain SimpleRewards campaign
         Flywheel.Payout[] memory payouts1 = new Flywheel.Payout[](1);
-        payouts1[0] = Flywheel.Payout({
-            recipient: attacker,
-            amount: INITIAL_TOKEN_BALANCE,
-            extraData: ""
-        });
+        payouts1[0] = Flywheel.Payout({recipient: attacker, amount: INITIAL_TOKEN_BALANCE, extraData: ""});
 
         vm.prank(simpleRewardsManager);
         flywheel.reward(simpleCampaign, address(rewardToken), abi.encode(payouts1));
@@ -578,7 +560,7 @@ contract CrossHookSecurityTest is Test {
         assertEq(flywheel.allocations(buyerCampaign, address(rewardToken), victim), 0);
 
         bytes memory buyerData = abi.encode(paymentInfo, ATTACK_AMOUNT);
-        
+
         // Should fail - no allocation in BuyerRewards campaign
         vm.expectRevert(); // InsufficientAllocation or similar
         vm.prank(buyerRewardsManager);
@@ -599,11 +581,7 @@ contract CrossHookSecurityTest is Test {
 
         // Drain SimpleRewards (manager has control)
         Flywheel.Payout[] memory payouts = new Flywheel.Payout[](1);
-        payouts[0] = Flywheel.Payout({
-            recipient: attacker,
-            amount: INITIAL_TOKEN_BALANCE / 2,
-            extraData: ""
-        });
+        payouts[0] = Flywheel.Payout({recipient: attacker, amount: INITIAL_TOKEN_BALANCE / 2, extraData: ""});
 
         vm.prank(simpleRewardsManager);
         flywheel.reward(simpleCampaign, address(rewardToken), abi.encode(payouts));
@@ -656,7 +634,7 @@ contract CrossHookSecurityTest is Test {
                 conversionConfigId: 1,
                 publisherRefCode: "PUB1", // Use registered publisher from setUp
                 timestamp: uint32(block.timestamp),
-                payoutRecipient: publisher1, // Set actual recipient 
+                payoutRecipient: publisher1, // Set actual recipient
                 payoutAmount: 200e18
             }),
             logBytes: ""
@@ -666,9 +644,9 @@ contract CrossHookSecurityTest is Test {
 
         // Attribution provider gets large fee from ad campaign
         uint256 providerBalanceBefore = token.balanceOf(attributionProvider);
-        
+
         vm.prank(address(flywheel));
-        (Flywheel.Payout[] memory payouts, uint256 fee) = 
+        (Flywheel.Payout[] memory payouts, uint256 fee) =
             adHook.onReward(attributionProvider, adCampaign, address(rewardToken), adHookData);
 
         // Fee should be 50% of 200e18 = 100e18
@@ -686,11 +664,7 @@ contract CrossHookSecurityTest is Test {
     function test_security_crossHookReentrancyAttack() public {
         // Deploy malicious contract that attempts cross-hook reentrancy
         CrossHookReentrancyAttacker attackerContract = new CrossHookReentrancyAttacker(
-            address(flywheel),
-            address(buyerHook),
-            address(simpleHook),
-            buyerCampaign,
-            simpleCampaign
+            address(flywheel), address(buyerHook), address(simpleHook), buyerCampaign, simpleCampaign
         );
 
         // This attack should fail due to access control

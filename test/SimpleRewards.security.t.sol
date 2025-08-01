@@ -55,11 +55,7 @@ contract SimpleRewardsSecurityTest is Test {
     /// @notice Test manager authorization bypass attempts
     function test_security_managerAuthorizationBypass() public {
         Flywheel.Payout[] memory payouts = new Flywheel.Payout[](1);
-        payouts[0] = Flywheel.Payout({
-            recipient: attacker,
-            amount: PAYOUT_AMOUNT,
-            extraData: ""
-        });
+        payouts[0] = Flywheel.Payout({recipient: attacker, amount: PAYOUT_AMOUNT, extraData: ""});
         bytes memory hookData = abi.encode(payouts);
 
         // Direct attack: Attacker tries to call payout functions
@@ -138,29 +134,22 @@ contract SimpleRewardsSecurityTest is Test {
         MaliciousRecipient maliciousRecipient = new MaliciousRecipient(address(hook), campaign);
 
         Flywheel.Payout[] memory payouts = new Flywheel.Payout[](1);
-        payouts[0] = Flywheel.Payout({
-            recipient: address(maliciousRecipient),
-            amount: PAYOUT_AMOUNT,
-            extraData: ""
-        });
+        payouts[0] = Flywheel.Payout({recipient: address(maliciousRecipient), amount: PAYOUT_AMOUNT, extraData: ""});
         bytes memory hookData = abi.encode(payouts);
 
         // Malicious recipient receives tokens normally (ERC20 doesn't trigger callbacks)
         // The reentrancy protection is at the Flywheel level for state-modifying functions
         vm.prank(manager);
         flywheel.reward(campaign, address(token), hookData);
-        
+
         // Verify the malicious recipient received tokens
         assertEq(token.balanceOf(address(maliciousRecipient)), PAYOUT_AMOUNT);
     }
 
     /// @notice Test cross-function reentrancy
     function test_security_crossFunctionReentrancy() public {
-        CrossFunctionReentrancyAttacker attacker_contract = new CrossFunctionReentrancyAttacker(
-            address(hook), 
-            address(flywheel), 
-            campaign
-        );
+        CrossFunctionReentrancyAttacker attacker_contract =
+            new CrossFunctionReentrancyAttacker(address(hook), address(flywheel), campaign);
 
         // Fund attacker contract so it can pay for gas
         token.transfer(address(attacker_contract), 100e18);
@@ -200,16 +189,12 @@ contract SimpleRewardsSecurityTest is Test {
     function test_security_batchPayoutManipulation() public {
         // Create large batch with hidden malicious recipient
         Flywheel.Payout[] memory payouts = new Flywheel.Payout[](10);
-        
+
         // Fill with legitimate-looking recipients
-        for (uint i = 0; i < 9; i++) {
-            payouts[i] = Flywheel.Payout({
-                recipient: victim,
-                amount: 1e18,
-                extraData: ""
-            });
+        for (uint256 i = 0; i < 9; i++) {
+            payouts[i] = Flywheel.Payout({recipient: victim, amount: 1e18, extraData: ""});
         }
-        
+
         // Hidden large payout to attacker
         payouts[9] = Flywheel.Payout({
             recipient: attacker,
@@ -231,11 +216,7 @@ contract SimpleRewardsSecurityTest is Test {
     /// @notice Test allocation/distribution timing attack
     function test_security_allocationDistributionTimingAttack() public {
         Flywheel.Payout[] memory payouts = new Flywheel.Payout[](1);
-        payouts[0] = Flywheel.Payout({
-            recipient: attacker,
-            amount: PAYOUT_AMOUNT,
-            extraData: ""
-        });
+        payouts[0] = Flywheel.Payout({recipient: attacker, amount: PAYOUT_AMOUNT, extraData: ""});
         bytes memory hookData = abi.encode(payouts);
 
         // Allocate funds
@@ -276,7 +257,7 @@ contract SimpleRewardsSecurityTest is Test {
         // Move campaign to finalized state first
         vm.prank(manager);
         flywheel.updateStatus(campaign, Flywheel.CampaignStatus.FINALIZING, "");
-        
+
         vm.prank(manager);
         flywheel.updateStatus(campaign, Flywheel.CampaignStatus.FINALIZED, "");
 
@@ -334,11 +315,7 @@ contract SimpleRewardsSecurityTest is Test {
 
         // Attacker (manager of their campaign) tries to control original campaign
         Flywheel.Payout[] memory payouts = new Flywheel.Payout[](1);
-        payouts[0] = Flywheel.Payout({
-            recipient: attacker,
-            amount: PAYOUT_AMOUNT,
-            extraData: ""
-        });
+        payouts[0] = Flywheel.Payout({recipient: attacker, amount: PAYOUT_AMOUNT, extraData: ""});
         bytes memory hookData = abi.encode(payouts);
 
         vm.expectRevert(SimpleRewards.Unauthorized.selector);

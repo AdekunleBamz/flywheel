@@ -51,16 +51,8 @@ contract SimpleRewardsTest is Test {
 
         // Create payout data
         Flywheel.Payout[] memory payouts = new Flywheel.Payout[](2);
-        payouts[0] = Flywheel.Payout({
-            recipient: recipient1,
-            amount: PAYOUT_AMOUNT,
-            extraData: ""
-        });
-        payouts[1] = Flywheel.Payout({
-            recipient: recipient2,
-            amount: PAYOUT_AMOUNT / 2,
-            extraData: ""
-        });
+        payouts[0] = Flywheel.Payout({recipient: recipient1, amount: PAYOUT_AMOUNT, extraData: ""});
+        payouts[1] = Flywheel.Payout({recipient: recipient2, amount: PAYOUT_AMOUNT / 2, extraData: ""});
 
         bytes memory hookData = abi.encode(payouts);
 
@@ -76,23 +68,17 @@ contract SimpleRewardsTest is Test {
     // NOTE: Core allocate/distribute/deallocate functionality is tested in Flywheel.t.sol
     // This hook focuses on SimpleRewards-specific behavior
 
-
-
     function test_onlyManager_canCallPayoutFunctions() public {
         // Fund and activate campaign
         vm.prank(manager);
         token.transfer(campaign, INITIAL_TOKEN_BALANCE);
-        
+
         vm.prank(manager);
         flywheel.updateStatus(campaign, Flywheel.CampaignStatus.ACTIVE, "");
 
         // Create payout data
         Flywheel.Payout[] memory payouts = new Flywheel.Payout[](1);
-        payouts[0] = Flywheel.Payout({
-            recipient: recipient1,
-            amount: PAYOUT_AMOUNT,
-            extraData: ""
-        });
+        payouts[0] = Flywheel.Payout({recipient: recipient1, amount: PAYOUT_AMOUNT, extraData: ""});
 
         bytes memory hookData = abi.encode(payouts);
 
@@ -134,7 +120,7 @@ contract SimpleRewardsTest is Test {
         // Finalize campaign
         vm.prank(manager);
         flywheel.updateStatus(campaign, Flywheel.CampaignStatus.FINALIZING, "");
-        
+
         vm.prank(manager);
         flywheel.updateStatus(campaign, Flywheel.CampaignStatus.FINALIZED, "");
 
@@ -158,21 +144,9 @@ contract SimpleRewardsTest is Test {
 
         // Create multiple payouts
         Flywheel.Payout[] memory payouts = new Flywheel.Payout[](3);
-        payouts[0] = Flywheel.Payout({
-            recipient: recipient1,
-            amount: 100e18,
-            extraData: ""
-        });
-        payouts[1] = Flywheel.Payout({
-            recipient: recipient2,
-            amount: 200e18,
-            extraData: ""
-        });
-        payouts[2] = Flywheel.Payout({
-            recipient: address(0x5000),
-            amount: 150e18,
-            extraData: ""
-        });
+        payouts[0] = Flywheel.Payout({recipient: recipient1, amount: 100e18, extraData: ""});
+        payouts[1] = Flywheel.Payout({recipient: recipient2, amount: 200e18, extraData: ""});
+        payouts[2] = Flywheel.Payout({recipient: address(0x5000), amount: 150e18, extraData: ""});
 
         bytes memory hookData = abi.encode(payouts);
 
@@ -217,25 +191,17 @@ contract SimpleRewardsTest is Test {
         vm.startPrank(manager);
         token.transfer(campaign, INITIAL_TOKEN_BALANCE);
         token2.transfer(campaign, INITIAL_TOKEN_BALANCE);
-        
+
         flywheel.updateStatus(campaign, Flywheel.CampaignStatus.ACTIVE, "");
         vm.stopPrank();
 
         // Create payouts for first token
         Flywheel.Payout[] memory payouts1 = new Flywheel.Payout[](1);
-        payouts1[0] = Flywheel.Payout({
-            recipient: recipient1,
-            amount: 100e18,
-            extraData: ""
-        });
+        payouts1[0] = Flywheel.Payout({recipient: recipient1, amount: 100e18, extraData: ""});
 
         // Create payouts for second token
         Flywheel.Payout[] memory payouts2 = new Flywheel.Payout[](1);
-        payouts2[0] = Flywheel.Payout({
-            recipient: recipient2,
-            amount: 200e18,
-            extraData: ""
-        });
+        payouts2[0] = Flywheel.Payout({recipient: recipient2, amount: 200e18, extraData: ""});
 
         // Process rewards for both tokens
         vm.prank(manager);
@@ -258,11 +224,7 @@ contract SimpleRewardsTest is Test {
 
         // Create payout data
         Flywheel.Payout[] memory payouts = new Flywheel.Payout[](1);
-        payouts[0] = Flywheel.Payout({
-            recipient: recipient1,
-            amount: 50e18,
-            extraData: ""
-        });
+        payouts[0] = Flywheel.Payout({recipient: recipient1, amount: 50e18, extraData: ""});
         bytes memory hookData = abi.encode(payouts);
 
         // Test in ACTIVE state
@@ -271,16 +233,16 @@ contract SimpleRewardsTest is Test {
 
         vm.prank(manager);
         flywheel.reward(campaign, address(token), hookData);
-        
+
         vm.prank(manager);
         flywheel.allocate(campaign, address(token), hookData);
-        
+
         vm.prank(manager);
         flywheel.deallocate(campaign, address(token), hookData);
-        
+
         vm.prank(manager);
         flywheel.allocate(campaign, address(token), hookData);
-        
+
         vm.prank(manager);
         flywheel.distribute(campaign, address(token), hookData);
 
@@ -290,16 +252,16 @@ contract SimpleRewardsTest is Test {
 
         vm.prank(manager);
         flywheel.reward(campaign, address(token), hookData);
-        
+
         vm.prank(manager);
         flywheel.allocate(campaign, address(token), hookData);
-        
+
         vm.prank(manager);
         flywheel.deallocate(campaign, address(token), hookData);
-        
+
         vm.prank(manager);
         flywheel.allocate(campaign, address(token), hookData);
-        
+
         vm.prank(manager);
         flywheel.distribute(campaign, address(token), hookData);
 
@@ -317,16 +279,8 @@ contract SimpleRewardsTest is Test {
 
         // Create zero amount payouts
         Flywheel.Payout[] memory payouts = new Flywheel.Payout[](2);
-        payouts[0] = Flywheel.Payout({
-            recipient: recipient1,
-            amount: 0,
-            extraData: ""
-        });
-        payouts[1] = Flywheel.Payout({
-            recipient: recipient2,
-            amount: PAYOUT_AMOUNT,
-            extraData: ""
-        });
+        payouts[0] = Flywheel.Payout({recipient: recipient1, amount: 0, extraData: ""});
+        payouts[1] = Flywheel.Payout({recipient: recipient2, amount: PAYOUT_AMOUNT, extraData: ""});
 
         bytes memory hookData = abi.encode(payouts);
 
@@ -371,11 +325,7 @@ contract SimpleRewardsTest is Test {
 
         // Create payout data
         Flywheel.Payout[] memory payouts = new Flywheel.Payout[](1);
-        payouts[0] = Flywheel.Payout({
-            recipient: recipient1,
-            amount: PAYOUT_AMOUNT,
-            extraData: ""
-        });
+        payouts[0] = Flywheel.Payout({recipient: recipient1, amount: PAYOUT_AMOUNT, extraData: ""});
 
         bytes memory hookData = abi.encode(payouts);
 
@@ -398,11 +348,11 @@ contract SimpleRewardsTest is Test {
 
     function test_endToEndSimpleRewardsFlow() public {
         // Integration test for complete SimpleRewards workflow
-        
+
         // Deploy additional tokens for proper separation
         address[] memory tokenHolders = new address[](1);
         tokenHolders[0] = manager;
-        
+
         DummyERC20 rewardToken = new DummyERC20(tokenHolders);
         DummyERC20 bonusToken = new DummyERC20(tokenHolders);
 
@@ -430,11 +380,7 @@ contract SimpleRewardsTest is Test {
 
         // 3. Immediate rewards for quick contributions
         Flywheel.Payout[] memory immediatePayouts = new Flywheel.Payout[](2);
-        immediatePayouts[0] = Flywheel.Payout({
-            recipient: recipient1,
-            amount: BASE_REWARD,
-            extraData: "github-pr-123"
-        });
+        immediatePayouts[0] = Flywheel.Payout({recipient: recipient1, amount: BASE_REWARD, extraData: "github-pr-123"});
         immediatePayouts[1] = Flywheel.Payout({
             recipient: recipient2,
             amount: BASE_REWARD * 2, // Larger contribution
@@ -526,7 +472,7 @@ contract SimpleRewardsTest is Test {
         // 8. Finalize campaign
         vm.prank(manager);
         flywheel.updateStatus(campaign, Flywheel.CampaignStatus.FINALIZING, "");
-        
+
         vm.prank(manager);
         flywheel.updateStatus(campaign, Flywheel.CampaignStatus.FINALIZED, "");
 
@@ -537,7 +483,7 @@ contract SimpleRewardsTest is Test {
         uint256 remainingBonusTokens = bonusToken.balanceOf(campaign);
         uint256 managerRewardBalanceBefore = rewardToken.balanceOf(manager);
         uint256 managerBonusBalanceBefore = bonusToken.balanceOf(manager);
-        
+
         vm.startPrank(manager);
         flywheel.withdrawFunds(campaign, address(rewardToken), remainingRewardTokens, "");
         flywheel.withdrawFunds(campaign, address(bonusToken), remainingBonusTokens, "");
@@ -551,26 +497,26 @@ contract SimpleRewardsTest is Test {
 
     function test_batchContributorRewards() public {
         // Test batch processing of multiple contributor rewards
-        
+
         uint256 BASE_REWARD = 1000e18;
-        
+
         // Fund with enough for batch rewards: 1000 + 2000 + ... + 10000 = 55000e18
         vm.prank(manager);
         token.transfer(campaign, 100000e18);
-        
+
         vm.prank(manager);
         flywheel.updateStatus(campaign, Flywheel.CampaignStatus.ACTIVE, "");
 
         // Create a large batch of contributors
         address[] memory contributors = new address[](10);
-        for (uint i = 0; i < 10; i++) {
+        for (uint256 i = 0; i < 10; i++) {
             contributors[i] = makeAddr(string(abi.encodePacked("contributor_", i)));
         }
 
         // Create batch payouts with varying amounts
         Flywheel.Payout[] memory batchPayouts = new Flywheel.Payout[](10);
         uint256 totalRewards = 0;
-        for (uint i = 0; i < 10; i++) {
+        for (uint256 i = 0; i < 10; i++) {
             uint256 amount = BASE_REWARD * (i + 1); // Escalating rewards
             batchPayouts[i] = Flywheel.Payout({
                 recipient: contributors[i],
@@ -585,7 +531,7 @@ contract SimpleRewardsTest is Test {
         flywheel.reward(campaign, address(token), abi.encode(batchPayouts));
 
         // Verify all contributors received their rewards
-        for (uint i = 0; i < 10; i++) {
+        for (uint256 i = 0; i < 10; i++) {
             uint256 expectedAmount = BASE_REWARD * (i + 1);
             assertEq(token.balanceOf(contributors[i]), expectedAmount);
         }
@@ -593,13 +539,13 @@ contract SimpleRewardsTest is Test {
 
     function test_flexibleRewardWorkflows() public {
         // Test the flexibility of SimpleRewards for different use cases
-        
+
         uint256 BASE_REWARD = 1000e18;
-        
+
         // Fund with enough for all use cases: 10000 + 100 + 200 + 2000 = ~12300e18
         vm.prank(manager);
         token.transfer(campaign, 20000e18);
-        
+
         vm.prank(manager);
         flywheel.updateStatus(campaign, Flywheel.CampaignStatus.ACTIVE, "");
 

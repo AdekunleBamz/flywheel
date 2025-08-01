@@ -41,11 +41,7 @@ contract BuyerRewardsSecurityTest is Test {
         token = new DummyERC20(initialHolders);
 
         // Create campaign
-        bytes memory hookData = abi.encode(
-            owner,
-            manager,
-            "https://api.example.com/campaign"
-        );
+        bytes memory hookData = abi.encode(owner, manager, "https://api.example.com/campaign");
 
         campaign = flywheel.createCampaign(address(hook), 1, hookData);
 
@@ -80,7 +76,7 @@ contract BuyerRewardsSecurityTest is Test {
         });
 
         bytes32 fakePaymentHash = escrow.getHash(fakePayment);
-        
+
         // Mock fake payment as collected (payment never actually happened)
         vm.mockCall(
             address(escrow),
@@ -117,7 +113,7 @@ contract BuyerRewardsSecurityTest is Test {
         });
 
         bytes32 paymentHash = escrow.getHash(paymentInfo);
-        
+
         vm.mockCall(
             address(escrow),
             abi.encodeWithSelector(escrow.paymentState.selector, paymentHash),
@@ -129,7 +125,7 @@ contract BuyerRewardsSecurityTest is Test {
         // First reward (legitimate)
         vm.prank(manager);
         flywheel.reward(campaign, address(token), hookData);
-        
+
         uint256 balanceAfterFirst = token.balanceOf(payer);
         assertEq(balanceAfterFirst, CASHBACK_AMOUNT);
 
@@ -145,11 +141,7 @@ contract BuyerRewardsSecurityTest is Test {
     /// @notice Test cross-campaign payment reuse
     function test_security_crossCampaignPaymentReuse() public {
         // Create second campaign
-        bytes memory hookData2 = abi.encode(
-            owner,
-            manager,
-            "https://api.example.com/campaign2"
-        );
+        bytes memory hookData2 = abi.encode(owner, manager, "https://api.example.com/campaign2");
         address campaign2 = flywheel.createCampaign(address(hook), 2, hookData2);
 
         vm.prank(owner);
@@ -175,7 +167,7 @@ contract BuyerRewardsSecurityTest is Test {
         });
 
         bytes32 paymentHash = escrow.getHash(paymentInfo);
-        
+
         vm.mockCall(
             address(escrow),
             abi.encodeWithSelector(escrow.paymentState.selector, paymentHash),
@@ -187,7 +179,7 @@ contract BuyerRewardsSecurityTest is Test {
         // Get rewards from first campaign
         vm.prank(manager);
         flywheel.reward(campaign, address(token), hookData);
-        
+
         // Attempt to get rewards from second campaign for same payment
         vm.prank(manager);
         flywheel.reward(campaign2, address(token), hookData);
@@ -270,7 +262,7 @@ contract BuyerRewardsSecurityTest is Test {
     function test_security_reentrancyViaMaliciousToken() public {
         // Deploy malicious token that reenters on transfer
         MaliciousToken maliciousToken = new MaliciousToken(address(flywheel), campaign, manager);
-        
+
         // Fund campaign with malicious token
         maliciousToken.mint(campaign, 1000e18);
 
@@ -290,7 +282,7 @@ contract BuyerRewardsSecurityTest is Test {
         });
 
         bytes32 paymentHash = escrow.getHash(paymentInfo);
-        
+
         vm.mockCall(
             address(escrow),
             abi.encodeWithSelector(escrow.paymentState.selector, paymentHash),
@@ -303,7 +295,7 @@ contract BuyerRewardsSecurityTest is Test {
         // The reentrancy attempt will be blocked, but the original call succeeds
         vm.prank(manager);
         flywheel.reward(campaign, address(maliciousToken), hookData);
-        
+
         // Verify the original payout succeeded (reentrancy was blocked)
         assertEq(maliciousToken.balanceOf(payer), CASHBACK_AMOUNT);
     }
@@ -330,7 +322,7 @@ contract BuyerRewardsSecurityTest is Test {
         });
 
         bytes32 paymentHash = escrow.getHash(paymentInfo);
-        
+
         vm.mockCall(
             address(escrow),
             abi.encodeWithSelector(escrow.paymentState.selector, paymentHash),
@@ -363,7 +355,7 @@ contract BuyerRewardsSecurityTest is Test {
         });
 
         bytes32 paymentHash = escrow.getHash(paymentInfo);
-        
+
         vm.mockCall(
             address(escrow),
             abi.encodeWithSelector(escrow.paymentState.selector, paymentHash),
@@ -377,7 +369,7 @@ contract BuyerRewardsSecurityTest is Test {
 
         // Try to distribute larger amount
         bytes memory distributeData = abi.encode(paymentInfo, CASHBACK_AMOUNT); // 100e18 > 50e18
-        
+
         vm.expectRevert(abi.encodeWithSelector(BuyerRewards.InsufficientAllocation.selector, CASHBACK_AMOUNT, 50e18));
         vm.prank(manager);
         flywheel.distribute(campaign, address(token), distributeData);
@@ -393,11 +385,7 @@ contract BuyerRewardsSecurityTest is Test {
         MaliciousEscrow maliciousEscrow = new MaliciousEscrow();
         BuyerRewards maliciousHook = new BuyerRewards(address(flywheel), address(maliciousEscrow));
 
-        bytes memory hookData = abi.encode(
-            owner,
-            manager,
-            "https://api.example.com/malicious"
-        );
+        bytes memory hookData = abi.encode(owner, manager, "https://api.example.com/malicious");
 
         address maliciousCampaign = flywheel.createCampaign(address(maliciousHook), 999, hookData);
 
@@ -454,7 +442,7 @@ contract BuyerRewardsSecurityTest is Test {
         });
 
         bytes32 paymentHash = escrow.getHash(paymentInfo);
-        
+
         vm.mockCall(
             address(escrow),
             abi.encodeWithSelector(escrow.paymentState.selector, paymentHash),
@@ -517,7 +505,11 @@ contract MaliciousEscrow {
         return keccak256("fake_payment");
     }
 
-    function paymentState(bytes32) external pure returns (bool hasCollectedPayment, bool hasRefundedPayment, bool hasExecuted) {
+    function paymentState(bytes32)
+        external
+        pure
+        returns (bool hasCollectedPayment, bool hasRefundedPayment, bool hasExecuted)
+    {
         return (true, false, false); // Always claim payment is collected
     }
 }

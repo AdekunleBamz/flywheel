@@ -36,11 +36,7 @@ contract BuyerRewardsTest is Test {
         token = new DummyERC20(initialHolders);
 
         // Create campaign
-        bytes memory hookData = abi.encode(
-            owner,
-            manager,
-            "https://api.example.com/campaign"
-        );
+        bytes memory hookData = abi.encode(owner, manager, "https://api.example.com/campaign");
 
         campaign = flywheel.createCampaign(address(hook), 1, hookData);
     }
@@ -66,7 +62,7 @@ contract BuyerRewardsTest is Test {
         });
 
         bytes32 paymentHash = escrow.getHash(paymentInfo);
-        
+
         // Mock payment collection in escrow
         vm.mockCall(
             address(escrow),
@@ -84,13 +80,13 @@ contract BuyerRewardsTest is Test {
 
         // Process reward
         bytes memory hookData = abi.encode(paymentInfo, CASHBACK_AMOUNT);
-        
+
         vm.prank(manager);
         flywheel.reward(campaign, address(token), hookData);
 
         // Verify payer received cashback
         assertEq(token.balanceOf(payer), CASHBACK_AMOUNT);
-        
+
         // Verify rewards info tracking
         (uint120 allocated, uint120 distributed) = hook.rewardsInfo(paymentHash, campaign);
         assertEq(allocated, 0);
@@ -99,8 +95,6 @@ contract BuyerRewardsTest is Test {
 
     // NOTE: Core allocate/distribute/deallocate functionality is tested in Flywheel.t.sol
     // This hook focuses on BuyerRewards-specific behavior (payment verification, etc.)
-
-
 
     function test_onlyManager_canCallPayoutFunctions() public {
         AuthCaptureEscrow.PaymentInfo memory paymentInfo = AuthCaptureEscrow.PaymentInfo({
@@ -123,7 +117,7 @@ contract BuyerRewardsTest is Test {
         // Fund and activate campaign
         vm.prank(owner);
         token.transfer(campaign, INITIAL_TOKEN_BALANCE);
-        
+
         vm.prank(manager);
         flywheel.updateStatus(campaign, Flywheel.CampaignStatus.ACTIVE, "");
 
@@ -145,7 +139,7 @@ contract BuyerRewardsTest is Test {
         // Finalize campaign
         vm.prank(manager);
         flywheel.updateStatus(campaign, Flywheel.CampaignStatus.FINALIZING, "");
-        
+
         vm.prank(manager);
         flywheel.updateStatus(campaign, Flywheel.CampaignStatus.FINALIZED, "");
 
@@ -176,7 +170,7 @@ contract BuyerRewardsTest is Test {
         });
 
         bytes32 paymentHash = escrow.getHash(paymentInfo);
-        
+
         // Mock payment NOT collected
         vm.mockCall(
             address(escrow),
@@ -187,7 +181,7 @@ contract BuyerRewardsTest is Test {
         // Fund and activate campaign
         vm.prank(owner);
         token.transfer(campaign, INITIAL_TOKEN_BALANCE);
-        
+
         vm.prank(manager);
         flywheel.updateStatus(campaign, Flywheel.CampaignStatus.ACTIVE, "");
 
@@ -248,7 +242,7 @@ contract BuyerRewardsTest is Test {
         });
 
         bytes32 paymentHash = escrow.getHash(paymentInfo);
-        
+
         vm.mockCall(
             address(escrow),
             abi.encodeWithSelector(escrow.paymentState.selector, paymentHash),
@@ -258,7 +252,7 @@ contract BuyerRewardsTest is Test {
         // Fund and activate campaign
         vm.prank(owner);
         token.transfer(campaign, INITIAL_TOKEN_BALANCE);
-        
+
         vm.prank(manager);
         flywheel.updateStatus(campaign, Flywheel.CampaignStatus.ACTIVE, "");
 
@@ -269,7 +263,7 @@ contract BuyerRewardsTest is Test {
 
         // Try to distribute larger amount
         bytes memory distributeData = abi.encode(paymentInfo, CASHBACK_AMOUNT); // 100e18 > 50e18
-        
+
         vm.expectRevert(abi.encodeWithSelector(BuyerRewards.InsufficientAllocation.selector, CASHBACK_AMOUNT, 50e18));
         vm.prank(manager);
         flywheel.distribute(campaign, address(token), distributeData);
@@ -277,11 +271,7 @@ contract BuyerRewardsTest is Test {
 
     function test_campaignCreatedEvent() public {
         // Create new campaign and check event
-        bytes memory hookData = abi.encode(
-            owner,
-            manager,
-            "https://api.example.com/new-campaign"
-        );
+        bytes memory hookData = abi.encode(owner, manager, "https://api.example.com/new-campaign");
 
         // Calculate expected campaign address
         address expectedCampaign = flywheel.campaignAddress(2, hookData);
@@ -290,7 +280,7 @@ contract BuyerRewardsTest is Test {
         emit BuyerRewards.CampaignCreated(expectedCampaign, owner, manager, "https://api.example.com/new-campaign");
 
         address newCampaign = flywheel.createCampaign(address(hook), 2, hookData);
-        
+
         // Verify campaign created
         assertEq(newCampaign, expectedCampaign);
         assertEq(hook.owners(newCampaign), owner);
@@ -303,23 +293,23 @@ contract BuyerRewardsTest is Test {
 
     function test_endToEndBuyerRewardsFlow() public {
         // Integration test for complete BuyerRewards workflow
-        
+
         // Setup - Deploy additional tokens for proper separation
         address[] memory usdcHolders = new address[](3);
         usdcHolders[0] = owner;
         usdcHolders[1] = payer;
         usdcHolders[2] = makeAddr("buyer2");
-        
+
         address[] memory rewardHolders = new address[](1);
         rewardHolders[0] = owner; // Only owner gets initial reward tokens
-        
+
         DummyERC20 usdc = new DummyERC20(usdcHolders);
         DummyERC20 rewardToken = new DummyERC20(rewardHolders);
-        
+
         uint256 INITIAL_FUNDING = 50000e18;
         uint256 CASHBACK_RATE_BPS = 500; // 5% cashback
         uint256 PURCHASE_AMOUNT = 1000e6; // 1,000 USDC
-        
+
         // Create campaign with reward token
         vm.prank(owner);
         rewardToken.transfer(campaign, INITIAL_FUNDING);
@@ -337,7 +327,7 @@ contract BuyerRewardsTest is Test {
         // 3. Simulate first buyer purchase and immediate cashback
         bytes32 payment1Hash = keccak256(abi.encodePacked("payment_1", payer, block.timestamp));
         uint256 cashbackAmount1 = PURCHASE_AMOUNT * CASHBACK_RATE_BPS / 10000;
-        
+
         AuthCaptureEscrow.PaymentInfo memory paymentInfo1 = AuthCaptureEscrow.PaymentInfo({
             operator: manager,
             payer: payer,
@@ -352,7 +342,7 @@ contract BuyerRewardsTest is Test {
             feeReceiver: address(0),
             salt: uint256(payment1Hash)
         });
-        
+
         // Simulate payment collection
         vm.startPrank(payer);
         usdc.approve(address(escrow), PURCHASE_AMOUNT);
@@ -384,7 +374,7 @@ contract BuyerRewardsTest is Test {
         address buyer2 = makeAddr("buyer2");
         bytes32 payment2Hash = keccak256(abi.encodePacked("payment_2", buyer2, block.timestamp));
         uint256 cashbackAmount2 = (PURCHASE_AMOUNT * 2) * CASHBACK_RATE_BPS / 10000;
-        
+
         AuthCaptureEscrow.PaymentInfo memory paymentInfo2 = AuthCaptureEscrow.PaymentInfo({
             operator: manager,
             payer: buyer2,
@@ -399,7 +389,7 @@ contract BuyerRewardsTest is Test {
             feeReceiver: address(0),
             salt: uint256(payment2Hash)
         });
-        
+
         // Simulate payment collection for buyer2
         vm.startPrank(buyer2);
         usdc.approve(address(escrow), PURCHASE_AMOUNT * 2);
@@ -438,7 +428,7 @@ contract BuyerRewardsTest is Test {
         // 6. Finalize campaign
         vm.prank(manager);
         flywheel.updateStatus(campaign, Flywheel.CampaignStatus.FINALIZING, "");
-        
+
         vm.prank(manager);
         flywheel.updateStatus(campaign, Flywheel.CampaignStatus.FINALIZED, "");
 
@@ -447,7 +437,7 @@ contract BuyerRewardsTest is Test {
         // 7. Owner withdraws remaining funds
         uint256 remainingFunds = rewardToken.balanceOf(campaign);
         uint256 ownerBalanceBefore = rewardToken.balanceOf(owner);
-        
+
         vm.prank(owner);
         flywheel.withdrawFunds(campaign, address(rewardToken), remainingFunds, "");
 
@@ -457,10 +447,10 @@ contract BuyerRewardsTest is Test {
 
     function test_authCaptureEscrowIntegration() public {
         // Test the integration with AuthCaptureEscrow for payment verification
-        
+
         vm.prank(manager);
         flywheel.updateStatus(campaign, Flywheel.CampaignStatus.ACTIVE, "");
-        
+
         vm.prank(owner);
         token.transfer(campaign, INITIAL_TOKEN_BALANCE);
 
@@ -468,7 +458,7 @@ contract BuyerRewardsTest is Test {
         bytes32 paymentHash = keccak256(abi.encodePacked("test_payment", payer, block.timestamp));
         uint256 PURCHASE_AMOUNT = 1000e6;
         uint256 CASHBACK_RATE_BPS = 500; // 5%
-        
+
         AuthCaptureEscrow.PaymentInfo memory paymentInfo = AuthCaptureEscrow.PaymentInfo({
             operator: manager,
             payer: payer,
@@ -483,7 +473,7 @@ contract BuyerRewardsTest is Test {
             feeReceiver: address(0),
             salt: uint256(paymentHash)
         });
-        
+
         // Mock escrow verification
         vm.mockCall(
             address(escrow),
@@ -508,7 +498,7 @@ contract BuyerRewardsTest is Test {
 
         // Test that uncollected payment would fail
         bytes32 uncollectedHash = keccak256(abi.encodePacked("uncollected_payment", makeAddr("buyer2")));
-        
+
         // Mock uncollected payment state
         vm.mockCall(
             address(escrow),
@@ -541,12 +531,12 @@ contract BuyerRewardsTest is Test {
 
     function test_multiTokenCashback() public {
         // Test cashback campaigns with multiple reward tokens
-        
+
         // Deploy additional reward token
         address[] memory holders = new address[](1);
         holders[0] = owner;
         DummyERC20 bonusToken = new DummyERC20(holders);
-        
+
         // Fund campaign with both tokens
         vm.startPrank(owner);
         token.transfer(campaign, INITIAL_TOKEN_BALANCE);
@@ -559,7 +549,7 @@ contract BuyerRewardsTest is Test {
         // Simulate payment
         bytes32 paymentHash = keccak256(abi.encodePacked("multi_token_payment", payer));
         uint256 PURCHASE_AMOUNT = 1000e6;
-        
+
         AuthCaptureEscrow.PaymentInfo memory paymentInfo = AuthCaptureEscrow.PaymentInfo({
             operator: manager,
             payer: payer,
@@ -574,7 +564,7 @@ contract BuyerRewardsTest is Test {
             feeReceiver: address(0),
             salt: uint256(paymentHash)
         });
-        
+
         // Mock escrow verification
         vm.mockCall(
             address(escrow),
