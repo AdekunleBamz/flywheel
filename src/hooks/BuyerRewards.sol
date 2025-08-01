@@ -6,12 +6,16 @@ import {AuthCaptureEscrow} from "commerce-payments/AuthCaptureEscrow.sol";
 import {Flywheel} from "../Flywheel.sol";
 import {CampaignHooks} from "../CampaignHooks.sol";
 
-/// @title CashbackRewards
+/// @title BuyerRewards
 ///
-/// @notice Campaign Hooks for cashback rewards controlled by a campaign manager
+/// @notice Reward buyers for their purchases made with the Commerce Payments Protocol (https://github.com/base/commerce-payments)
+///
+/// @dev Rewards can be made in any token (supports cashback, loyalty, etc.)
+/// @dev Rewards can be made in any amount (supports %, fixed, etc.)
+/// @dev Rewards can be made on any payment (supports custom filtering for platforms, wallets, merchants, etc.)
 ///
 /// @author Coinbase
-contract CashbackRewards is CampaignHooks {
+contract BuyerRewards is CampaignHooks {
     /// @notice Tracks rewards info per payment per campaign
     struct RewardsInfo {
         /// @dev Amount of reward allocated for this payment
@@ -55,7 +59,11 @@ contract CashbackRewards is CampaignHooks {
     /// @notice Thrown when the token is invalid
     error InvalidToken();
 
+    /// @notice Thrown when the payment has not been collected
+    error PaymentNotCollected();
+
     /// @dev Modifier to check if the sender is the manager of the campaign
+    ///
     /// @param sender Sender address
     /// @param campaign Campaign address
     modifier onlyManager(address sender, address campaign) {
@@ -64,6 +72,7 @@ contract CashbackRewards is CampaignHooks {
     }
 
     /// @notice Constructor
+    ///
     /// @param flywheel_ The Flywheel core protocol contract address
     /// @param escrow_ The AuthCaptureEscrow contract address
     constructor(address flywheel_, address escrow_) CampaignHooks(flywheel_) {
@@ -176,8 +185,10 @@ contract CashbackRewards is CampaignHooks {
     }
 
     /// @dev Parses the hook data and returns the payment info, payment info hash, and payout amount
+    ///
     /// @param token Expected token address for validation
     /// @param hookData The hook data
+    ///
     /// @return paymentInfo The payment info
     /// @return paymentInfoHash The payment info hash
     /// @return payoutAmount The payout amount
@@ -186,16 +197,22 @@ contract CashbackRewards is CampaignHooks {
         view
         returns (AuthCaptureEscrow.PaymentInfo memory paymentInfo, bytes32 paymentInfoHash, uint120 payoutAmount)
     {
+        // Check payout amount non-zero
         (paymentInfo, payoutAmount) = abi.decode(hookData, (AuthCaptureEscrow.PaymentInfo, uint120));
         if (payoutAmount == 0) revert ZeroPayoutAmount();
-        if (paymentInfo.token != token) revert InvalidToken();
+
+        // Check payment has been collected
         paymentInfoHash = escrow.getHash(paymentInfo);
+        (bool hasCollectedPayment,,) = escrow.paymentState(paymentInfoHash);
+        if (!hasCollectedPayment) revert PaymentNotCollected();
     }
 
     /// @notice Creates a Flywheel.Payout array for a given payment and amount
+    ///
     /// @param paymentInfo Payment info
     /// @param paymentInfoHash Hash of payment info
     /// @param amount Amount of cashback to reward
+    ///
     /// @return payouts Payout array
     function _createPayouts(AuthCaptureEscrow.PaymentInfo memory paymentInfo, bytes32 paymentInfoHash, uint120 amount)
         internal
