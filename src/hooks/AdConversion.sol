@@ -19,16 +19,16 @@ contract AdConversion is CampaignHooks {
         bool isActive;
         /// @dev Whether the conversion event is onchain
         bool isEventOnchain;
-        /// @dev URL to extra metadata for offchain events
-        string conversionMetadataUrl;
+        /// @dev URI to extra metadata for offchain events
+        string metadataURI;
     }
 
     // Input structure for creating conversion configs (without isActive)
     struct ConversionConfigInput {
         /// @dev Whether the conversion event is onchain
         bool isEventOnchain;
-        /// @dev URL to extra metadata for offchain events
-        string conversionMetadataUrl;
+        /// @dev URI to extra metadata for offchain events
+        string metadataURI;
     }
 
     /// @notice Attribution structure containing payout and conversion data
@@ -46,12 +46,12 @@ contract AdConversion is CampaignHooks {
         /// @dev Click identifier
         string clickId;
         /// @dev Configuration ID for the conversion (0 = no config/unregistered)
-        uint8 conversionConfigId;
-        /// @dev Publisher reference code
+        uint8 configId;
+        /// @dev Referral code
         string publisherRefCode;
         /// @dev Timestamp of the conversion
         uint32 timestamp;
-        /// @dev Recipient address for the conversion, zero address implies using the publisher registry to get the payout address
+        /// @dev Recipient address for the conversion, zero address implies using the referral code registry to get the payout address
         address payoutRecipient;
         /// @dev Amount of the payout for this conversion
         uint256 payoutAmount;
@@ -88,7 +88,7 @@ contract AdConversion is CampaignHooks {
     uint8 public constant MAX_CONVERSION_CONFIGS = type(uint8).max;
 
     /// @notice Address of the publisher registry contract
-    BuilderCodes public immutable publisherRegistry;
+    BuilderCodes public immutable publisherCodesRegistry;
 
     /// @notice Mapping of campaign addresses to their URI
     mapping(address campaign => string uri) public override campaignURI;
@@ -100,7 +100,7 @@ contract AdConversion is CampaignHooks {
     mapping(address attributionProvider => uint16 feeBps) public attributionProviderFees;
 
     /// @notice Mapping from campaign to allowed publisher ref codes
-    mapping(address campaign => mapping(string refCode => bool allowed)) public allowedPublishers;
+    mapping(address campaign => mapping(string publisherRefCode => bool allowed)) public allowedPublishers;
 
     /// @notice Mapping from campaign to conversion configs by config ID
     mapping(address campaign => mapping(uint8 configId => ConversionConfig)) public conversionConfigs;
@@ -133,11 +133,8 @@ contract AdConversion is CampaignHooks {
     /// @notice Emitted when a conversion config is disabled
     event ConversionConfigStatusChanged(address indexed campaign, uint8 indexed configId, bool isActive);
 
-    /// @notice Emitted when conversion config metadata is updated
-    event ConversionConfigMetadataUpdated(address indexed campaign, uint8 indexed configId);
-
     /// @notice Emitted when a publisher is added to campaign allowlist
-    event PublisherAddedToAllowlist(address indexed campaign, string refCode);
+    event PublisherAddedToAllowlist(address indexed campaign, string publisherRefCode);
 
     /// @notice Emitted when an ad campaign is created
     ///
@@ -165,10 +162,10 @@ contract AdConversion is CampaignHooks {
     /// @param feeBps The invalid fee BPS
     error InvalidFeeBps(uint16 feeBps);
 
-    /// @notice Error thrown when publisher ref code is invalid
+    /// @notice Error thrown when referral code is invalid
     error InvalidPublisherRefCode();
 
-    /// @notice Error thrown when publisher ref code is not in allowlist
+    /// @notice Error thrown when referral code is not in allowlist
     error PublisherNotAllowed();
 
     /// @notice Error thrown when conversion config ID is invalid
@@ -195,10 +192,11 @@ contract AdConversion is CampaignHooks {
     ///
     /// @param protocol_ Address of the protocol contract
     /// @param owner_ Address of the contract owner
-    /// @param referralCodeRegistry_ Address of the publisher registry contract
-    constructor(address protocol_, address owner_, address referralCodeRegistry_) CampaignHooks(protocol_) {
-        if (referralCodeRegistry_ == address(0)) revert ZeroAddress();
-        publisherRegistry = BuilderCodes(referralCodeRegistry_);
+    /// @param publisherCodesRegistry_ Address of the referral code registry contract
+    constructor(address protocol_, address owner_, address publisherCodesRegistry_) CampaignHooks(protocol_) {
+        if (publisherCodesRegistry_ == address(0)) revert ZeroAddress();
+
+        publisherCodesRegistry = BuilderCodes(publisherCodesRegistry_);
     }
 
     /// @notice Sets the fee for an attribution provider
@@ -221,7 +219,7 @@ contract AdConversion is CampaignHooks {
             address attributionProvider,
             address advertiser,
             string memory uri,
-            string[] memory allowedRefCodes,
+            string[] memory allowedPublisherRefCodes,
             ConversionConfigInput[] memory configs,
             uint48 campaignAttributionWindow
         ) = abi.decode(hookData, (address, address, string, string[], ConversionConfigInput[], uint48));
@@ -229,7 +227,7 @@ contract AdConversion is CampaignHooks {
         // Validate attribution deadline duration (if non-zero, must be in days precision)
         if (campaignAttributionWindow % 1 days != 0) revert InvalidAttributionWindow(campaignAttributionWindow);
 
-        bool hasAllowlist = allowedRefCodes.length > 0;
+        bool hasAllowlist = allowedPublisherRefCodes.length > 0;
 
         // Store campaign state
         state[campaign] = CampaignState({
@@ -243,10 +241,10 @@ contract AdConversion is CampaignHooks {
 
         // Set up allowed publishers mapping if allowlist exists
         if (hasAllowlist) {
-            uint256 count = allowedRefCodes.length;
+            uint256 count = allowedPublisherRefCodes.length;
             for (uint256 i = 0; i < count; i++) {
-                allowedPublishers[campaign][allowedRefCodes[i]] = true;
-                emit PublisherAddedToAllowlist(campaign, allowedRefCodes[i]);
+                allowedPublishers[campaign][allowedPublisherRefCodes[i]] = true;
+                emit PublisherAddedToAllowlist(campaign, allowedPublisherRefCodes[i]);
             }
         }
 
@@ -259,7 +257,7 @@ contract AdConversion is CampaignHooks {
             ConversionConfig memory activeConfig = ConversionConfig({
                 isActive: true,
                 isEventOnchain: configs[i].isEventOnchain,
-                conversionMetadataUrl: configs[i].conversionMetadataUrl
+                metadataURI: configs[i].metadataURI
             });
             conversionConfigs[campaign][configId] = activeConfig;
             emit ConversionConfigAdded(campaign, configId, activeConfig);
@@ -291,15 +289,15 @@ contract AdConversion is CampaignHooks {
         uint256 uniqueCount = 0;
 
         // Loop over attributions, deducting attribution fee from payout amount and emitting appropriate events
-        uint256 count = attributions.length;
-        for (uint256 i = 0; i < count; i++) {
-            // Validate publisher ref code exists in the registry
+
+        for (uint256 i = 0; i < attributions.length; i++) {
+            // Validate referral code exists in the registry
             string memory publisherRefCode = attributions[i].conversion.publisherRefCode;
-            if (bytes(publisherRefCode).length != 0 && !publisherRegistry.isRegistered(publisherRefCode)) {
+            if (bytes(publisherRefCode).length != 0 && !publisherCodesRegistry.isRegistered(publisherRefCode)) {
                 revert InvalidPublisherRefCode();
             }
 
-            // Check if publisher is in allowlist (if allowlist exists)
+            // Check if referral code is in allowlist (if allowlist exists)
             if (state[campaign].hasAllowlist) {
                 if (bytes(publisherRefCode).length != 0 && !allowedPublishers[campaign][publisherRefCode]) {
                     revert PublisherNotAllowed();
@@ -307,7 +305,7 @@ contract AdConversion is CampaignHooks {
             }
 
             // Validate conversion config (if configId is not 0)
-            uint8 configId = attributions[i].conversion.conversionConfigId;
+            uint8 configId = attributions[i].conversion.configId;
             bytes memory logBytes = attributions[i].logBytes;
 
             if (configId != 0) {
@@ -325,9 +323,9 @@ contract AdConversion is CampaignHooks {
 
             address payoutAddress = attributions[i].conversion.payoutRecipient;
 
-            // If the recipient is the zero address, we use the publisher registry to get the payout address
+            // If the recipient is the zero address, we use the referral code registry to get the payout address
             if (payoutAddress == address(0)) {
-                payoutAddress = publisherRegistry.payoutAddress(publisherRefCode);
+                payoutAddress = publisherCodesRegistry.payoutAddress(publisherRefCode);
                 attributions[i].conversion.payoutRecipient = payoutAddress;
             }
 
@@ -429,15 +427,15 @@ contract AdConversion is CampaignHooks {
         }
     }
 
-    /// @notice Adds a publisher ref code to the campaign allowlist
+    /// @notice Adds a referral code to the campaign allowlist
     /// @param campaign Address of the campaign
-    /// @param refCode Publisher ref code to add
-    /// @dev Only advertiser can add publishers to allowlist
-    function addAllowedPublisherRefCode(address campaign, string memory refCode) external {
+    /// @param publisherRefCode Referral code to add
+    /// @dev Only advertiser can add referral codes to allowlist
+    function addAllowedPublisherRefCode(address campaign, string memory publisherRefCode) external {
         if (msg.sender != state[campaign].advertiser) revert Unauthorized();
 
-        // Validate publisher exists in registry
-        if (!publisherRegistry.isRegistered(refCode)) {
+        // Validate referral code exists in registry
+        if (!publisherCodesRegistry.isRegistered(publisherRefCode)) {
             revert InvalidPublisherRefCode();
         }
 
@@ -447,8 +445,8 @@ contract AdConversion is CampaignHooks {
         }
 
         // Add to mapping
-        allowedPublishers[campaign][refCode] = true;
-        emit PublisherAddedToAllowlist(campaign, refCode);
+        allowedPublishers[campaign][publisherRefCode] = true;
+        emit PublisherAddedToAllowlist(campaign, publisherRefCode);
     }
 
     /// @notice Adds a new conversion config to an existing campaign
@@ -463,11 +461,8 @@ contract AdConversion is CampaignHooks {
 
         // Add the new config - always set isActive to true
         uint8 newConfigId = currentCount + 1;
-        ConversionConfig memory activeConfig = ConversionConfig({
-            isActive: true,
-            isEventOnchain: config.isEventOnchain,
-            conversionMetadataUrl: config.conversionMetadataUrl
-        });
+        ConversionConfig memory activeConfig =
+            ConversionConfig({isActive: true, isEventOnchain: config.isEventOnchain, metadataURI: config.metadataURI});
         conversionConfigs[campaign][newConfigId] = activeConfig;
         conversionConfigCount[campaign] = newConfigId;
 
@@ -491,26 +486,6 @@ contract AdConversion is CampaignHooks {
         emit ConversionConfigStatusChanged(campaign, configId, false);
     }
 
-    /// @notice Signals that conversion config metadata has been updated
-    /// @param campaign Address of the campaign
-    /// @param configId The ID of the conversion config that was updated
-    /// @dev Only advertiser or attribution provider can signal metadata updates
-    /// @dev Indexers should update their metadata cache for this conversion config
-    function updateConversionConfigMetadata(address campaign, uint8 configId) external {
-        // Check authorization - either advertiser or attribution provider
-        if (msg.sender != state[campaign].advertiser && msg.sender != state[campaign].attributionProvider) {
-            revert Unauthorized();
-        }
-
-        // Validate config exists
-        if (configId == 0 || configId > conversionConfigCount[campaign]) {
-            revert InvalidConversionConfigId();
-        }
-
-        // Emit event to signal metadata update
-        emit ConversionConfigMetadataUpdated(campaign, configId);
-    }
-
     /// @notice Checks if a campaign has a publisher allowlist
     /// @param campaign Address of the campaign
     /// @return True if the campaign has an allowlist
@@ -518,16 +493,16 @@ contract AdConversion is CampaignHooks {
         return state[campaign].hasAllowlist;
     }
 
-    /// @notice Checks if a publisher ref code is allowed for a campaign
+    /// @notice Checks if a referral code is allowed for a campaign
     /// @param campaign Address of the campaign
-    /// @param refCode Publisher ref code to check
-    /// @return True if the publisher is allowed (or if no allowlist exists)
-    function isPublisherAllowed(address campaign, string memory refCode) external view returns (bool) {
-        // If no allowlist exists, all publishers are allowed
+    /// @param publisherRefCode Referral code to check
+    /// @return True if the referral code is allowed (or if no allowlist exists)
+    function isPublisherRefCodeAllowed(address campaign, string memory publisherRefCode) external view returns (bool) {
+        // If no allowlist exists, all referral codes are allowed
         if (!state[campaign].hasAllowlist) {
             return true;
         }
-        return allowedPublishers[campaign][refCode];
+        return allowedPublishers[campaign][publisherRefCode];
     }
 
     /// @notice Gets a conversion config for a campaign
