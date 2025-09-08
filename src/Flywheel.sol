@@ -181,6 +181,9 @@ contract Flywheel is ReentrancyGuardTransient {
     /// @notice Thrown when address is zero
     error ZeroAddress();
 
+    /// @notice Thrown when amount is zero
+    error ZeroAmount();
+
     /// @notice Thrown when campaign does not have enough balance for an operation
     error InsufficientCampaignFunds();
 
@@ -247,6 +250,7 @@ contract Flywheel is ReentrancyGuardTransient {
         uint256 count = payouts.length;
         for (uint256 i = 0; i < count; i++) {
             (address recipient, uint256 amount) = (payouts[i].recipient, payouts[i].amount);
+            if (amount == 0) continue;
             Campaign(campaign).sendTokens(token, recipient, amount);
             emit PayoutRewarded(campaign, token, recipient, amount, payouts[i].extraData);
         }
@@ -274,6 +278,7 @@ contract Flywheel is ReentrancyGuardTransient {
         mapping(bytes32 key => uint256 amount) storage _pendingPayouts = pendingPayouts[campaign][token];
         for (uint256 i = 0; i < count; i++) {
             (bytes32 key, uint256 amount) = (allocations[i].key, allocations[i].amount);
+            if (amount == 0) continue;
             totalAmount += amount;
             _pendingPayouts[key] += amount;
             emit PayoutAllocated(campaign, token, key, amount, allocations[i].extraData);
@@ -300,6 +305,7 @@ contract Flywheel is ReentrancyGuardTransient {
         mapping(bytes32 key => uint256 amount) storage _pendingPayouts = pendingPayouts[campaign][token];
         for (uint256 i = 0; i < count; i++) {
             (bytes32 key, uint256 amount) = (allocations[i].key, allocations[i].amount);
+            if (amount == 0) continue;
             totalAmount += amount;
             _pendingPayouts[key] -= amount;
             emit PayoutsDeallocated(campaign, token, key, amount, allocations[i].extraData);
@@ -331,6 +337,7 @@ contract Flywheel is ReentrancyGuardTransient {
         for (uint256 i = 0; i < count; i++) {
             (address recipient, bytes32 key, uint256 amount) =
                 (distributions[i].recipient, distributions[i].key, distributions[i].amount);
+            if (amount == 0) continue;
             totalAmount += amount;
             _pendingPayouts[key] -= amount;
             Campaign(campaign).sendTokens(token, recipient, amount);
@@ -358,6 +365,7 @@ contract Flywheel is ReentrancyGuardTransient {
         for (uint256 i = 0; i < count; i++) {
             (address recipient, bytes32 key, uint256 amount) =
                 (distributions[i].recipient, distributions[i].key, distributions[i].amount);
+            if (amount == 0) continue;
             totalAmount += amount;
             _pendingFees[key] -= amount;
             Campaign(campaign).sendTokens(token, recipient, amount);
@@ -379,6 +387,7 @@ contract Flywheel is ReentrancyGuardTransient {
     {
         Payout memory payout = _campaigns[campaign].hooks.onWithdrawFunds(msg.sender, campaign, token, hookData);
         (address recipient, uint256 amount) = (payout.recipient, payout.amount);
+        if (amount == 0) revert ZeroAmount();
         Campaign(campaign).sendTokens(token, recipient, amount);
         emit FundsWithdrawn(campaign, token, recipient, amount, payout.extraData);
         _assertTotalReservedSolvency(campaign, token, totalReserved[campaign][token]);
