@@ -73,6 +73,8 @@ contract AdConversion is CampaignHooks {
         address advertiser;
         /// @dev Whether this campaign has a publisher allowlist
         bool hasAllowlist;
+        /// @dev Attribution provider fee in basis points, cached at campaign creation
+        uint16 attributionProviderFeeBps;
         /// @dev Address of the attribution provider
         address attributionProvider;
         /// @dev Duration for attribution deadline specific to this campaign
@@ -95,9 +97,6 @@ contract AdConversion is CampaignHooks {
 
     /// @notice Mapping of campaign addresses to finalization information
     mapping(address campaign => CampaignState) public state;
-
-    /// @notice Mapping of attribution provider addresses to their fee in basis points
-    mapping(address attributionProvider => uint16 feeBps) public attributionProviderFees;
 
     /// @notice Mapping from campaign to allowed publisher ref codes
     mapping(address campaign => mapping(string publisherRefCode => bool allowed)) public allowedPublishers;
@@ -149,13 +148,6 @@ contract AdConversion is CampaignHooks {
         address indexed campaign, address attributionProvider, address advertiser, string uri, uint48 attributionWindow
     );
 
-    /// @notice Emitted when an attribution provider updates their fee
-    ///
-    /// @param attributionProvider The attribution provider address
-    /// @param oldFeeBps The previous fee in basis points
-    /// @param newFeeBps The new fee in basis points
-    event AttributionProviderFeeUpdated(address indexed attributionProvider, uint16 oldFeeBps, uint16 newFeeBps);
-
     /// @notice Error thrown when an unauthorized action is attempted
     error Unauthorized();
 
@@ -201,20 +193,6 @@ contract AdConversion is CampaignHooks {
         publisherCodesRegistry = BuilderCodes(publisherCodesRegistry_);
     }
 
-    /// @notice Sets the fee for an attribution provider
-    ///
-    /// @param feeBps The fee in basis points (0 to 10000, where 10000 = 100%)
-    ///
-    /// @dev Only the attribution provider themselves can set their fee
-    function setAttributionProviderFee(uint16 feeBps) external {
-        if (feeBps > MAX_BPS) revert InvalidFeeBps(feeBps);
-
-        uint16 oldFeeBps = attributionProviderFees[msg.sender];
-        attributionProviderFees[msg.sender] = feeBps;
-
-        emit AttributionProviderFeeUpdated(msg.sender, oldFeeBps, feeBps);
-    }
-
     /// @inheritdoc CampaignHooks
     function onCreateCampaign(address campaign, bytes calldata hookData) external override onlyFlywheel {
         (
@@ -223,14 +201,18 @@ contract AdConversion is CampaignHooks {
             string memory uri,
             string[] memory allowedPublisherRefCodes,
             ConversionConfigInput[] memory configs,
-            uint48 campaignAttributionWindow
-        ) = abi.decode(hookData, (address, address, string, string[], ConversionConfigInput[], uint48));
+            uint48 campaignAttributionWindow,
+            uint16 attributionProviderFeeBps
+        ) = abi.decode(hookData, (address, address, string, string[], ConversionConfigInput[], uint48, uint16));
 
         // Validate attribution deadline duration (if non-zero, must be in days precision)
         if (campaignAttributionWindow % 1 days != 0) revert InvalidAttributionWindow(campaignAttributionWindow);
 
         // Validate attribution window is between 0 and 6 months (180 days)
         if (campaignAttributionWindow > 180 days) revert InvalidAttributionWindow(campaignAttributionWindow);
+
+        // Validate attribution provider fee
+        if (attributionProviderFeeBps > MAX_BPS) revert InvalidFeeBps(attributionProviderFeeBps);
 
         bool hasAllowlist = allowedPublisherRefCodes.length > 0;
 
@@ -240,14 +222,15 @@ contract AdConversion is CampaignHooks {
             advertiser: advertiser,
             attributionDeadline: 0,
             attributionWindow: campaignAttributionWindow,
-            hasAllowlist: hasAllowlist
+            hasAllowlist: hasAllowlist,
+            attributionProviderFeeBps: attributionProviderFeeBps
         });
         campaignURI[campaign] = uri;
 
         // Set up allowed publishers mapping if allowlist exists
         if (hasAllowlist) {
-            uint256 count = allowedPublisherRefCodes.length;
-            for (uint256 i = 0; i < count; i++) {
+            uint256 publisherCount = allowedPublisherRefCodes.length;
+            for (uint256 i = 0; i < publisherCount; i++) {
                 allowedPublishers[campaign][allowedPublisherRefCodes[i]] = true;
                 emit PublisherAddedToAllowlist(campaign, allowedPublisherRefCodes[i]);
             }
@@ -282,8 +265,8 @@ contract AdConversion is CampaignHooks {
         // Validate that the caller is the authorized attribution provider for this campaign
         if (attributionProvider != state[campaign].attributionProvider) revert Unauthorized();
 
-        // Get the fee from the stored attribution provider fees
-        uint16 feeBps = attributionProviderFees[attributionProvider];
+        // Get the fee from the cached campaign state
+        uint16 feeBps = state[campaign].attributionProviderFeeBps;
 
         // Decode only the attributions from hookData
         Attribution[] memory attributions = abi.decode(hookData, (Attribution[]));
