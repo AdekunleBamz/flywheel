@@ -194,7 +194,7 @@ contract AdConversion is CampaignHooks {
     }
 
     /// @inheritdoc CampaignHooks
-    function onCreateCampaign(address campaign, bytes calldata hookData) external override onlyFlywheel {
+    function _onCreateCampaign(address campaign, bytes calldata hookData) internal override {
         (
             address attributionProvider,
             address advertiser,
@@ -256,10 +256,9 @@ contract AdConversion is CampaignHooks {
     }
 
     /// @inheritdoc CampaignHooks
-    function onReward(address attributionProvider, address campaign, address payoutToken, bytes calldata hookData)
-        external
+    function _onReward(address attributionProvider, address campaign, address payoutToken, bytes calldata hookData)
+        internal
         override
-        onlyFlywheel
         returns (Flywheel.Payout[] memory payouts, Flywheel.Allocation[] memory fees)
     {
         // Validate that the caller is the authorized attribution provider for this campaign
@@ -366,10 +365,9 @@ contract AdConversion is CampaignHooks {
 
     /// @inheritdoc CampaignHooks
     /// @dev Only advertiser allowed to withdraw funds on finalized campaigns
-    function onWithdrawFunds(address sender, address campaign, address token, bytes calldata hookData)
-        external
+    function _onWithdrawFunds(address sender, address campaign, address token, bytes calldata hookData)
+        internal
         override
-        onlyFlywheel
         returns (Flywheel.Payout memory payout)
     {
         if (sender != state[campaign].advertiser) revert Unauthorized();
@@ -380,10 +378,9 @@ contract AdConversion is CampaignHooks {
     }
 
     /// @inheritdoc CampaignHooks
-    function onDistributeFees(address sender, address campaign, address token, bytes calldata hookData)
-        external
+    function _onDistributeFees(address sender, address campaign, address token, bytes calldata hookData)
+        internal
         override
-        onlyFlywheel
         returns (Flywheel.Distribution[] memory distributions)
     {
         if (sender != state[campaign].attributionProvider) revert Unauthorized();
@@ -397,13 +394,13 @@ contract AdConversion is CampaignHooks {
     }
 
     /// @inheritdoc CampaignHooks
-    function onUpdateStatus(
+    function _onUpdateStatus(
         address sender,
         address campaign,
         Flywheel.CampaignStatus oldStatus,
         Flywheel.CampaignStatus newStatus,
         bytes calldata hookData
-    ) external override onlyFlywheel {
+    ) internal override {
         address attributionProvider = state[campaign].attributionProvider;
         address advertiser = state[campaign].advertiser;
 
@@ -450,11 +447,7 @@ contract AdConversion is CampaignHooks {
     }
 
     /// @inheritdoc CampaignHooks
-    function onUpdateMetadata(address sender, address campaign, bytes calldata hookData)
-        external
-        override
-        onlyFlywheel
-    {
+    function _onUpdateMetadata(address sender, address campaign, bytes calldata hookData) internal override {
         if (sender != state[campaign].attributionProvider && sender != state[campaign].advertiser) {
             revert Unauthorized();
         }
