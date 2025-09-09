@@ -145,6 +145,15 @@ contract Flywheel is ReentrancyGuardTransient {
     /// @param extraData Extra data for the payout to attach in events
     event PayoutsDeallocated(address indexed campaign, address token, bytes32 key, uint256 amount, bytes extraData);
 
+    /// @notice Emitted when a fee is sent to a recipient
+    ///
+    /// @param campaign Address of the campaign
+    /// @param token Address of the payout token
+    /// @param recipient Address receiving the fee
+    /// @param amount Amount of tokens sent
+    /// @param extraData Extra data for the fee to attach in events
+    event FeeSent(address indexed campaign, address token, address recipient, uint256 amount, bytes extraData);
+
     /// @notice Emitted when a fee is allocated to a recipient
     ///
     /// @param campaign Address of the campaign
@@ -245,10 +254,10 @@ contract Flywheel is ReentrancyGuardTransient {
         nonReentrant
         onlyExists(campaign)
         acceptingPayouts(campaign)
-        returns (Payout[] memory payouts, Allocation[] memory fees)
+        returns (Payout[] memory payouts, Payout[] memory immediateFees, Allocation[] memory delayedFees)
     {
-        (payouts, fees) = _campaigns[campaign].hooks.onSend(msg.sender, campaign, token, hookData);
-        _allocateFees(campaign, token, fees);
+        (payouts, immediateFees, delayedFees) = _campaigns[campaign].hooks.onSend(msg.sender, campaign, token, hookData);
+        _processFees(campaign, token, immediateFees, delayedFees);
 
         uint256 count = payouts.length;
         for (uint256 i = 0; i < count; i++) {
@@ -332,10 +341,11 @@ contract Flywheel is ReentrancyGuardTransient {
         nonReentrant
         onlyExists(campaign)
         acceptingPayouts(campaign)
-        returns (Distribution[] memory distributions, Allocation[] memory fees)
+        returns (Distribution[] memory distributions, Payout[] memory immediateFees, Allocation[] memory delayedFees)
     {
-        (distributions, fees) = _campaigns[campaign].hooks.onDistribute(msg.sender, campaign, token, hookData);
-        _allocateFees(campaign, token, fees);
+        (distributions, immediateFees, delayedFees) =
+            _campaigns[campaign].hooks.onDistribute(msg.sender, campaign, token, hookData);
+        _processFees(campaign, token, immediateFees, delayedFees);
 
         (uint256 totalAmount, uint256 count) = (0, distributions.length);
         mapping(bytes32 key => uint256 amount) storage _allocatedPayout = allocatedPayout[campaign][token];
@@ -495,17 +505,31 @@ contract Flywheel is ReentrancyGuardTransient {
     ///
     /// @param campaign Address of the campaign
     /// @param token Address of the token to allocate the fee from
-    /// @param fees Allocation of the fees
-    function _allocateFees(address campaign, address token, Allocation[] memory fees) internal {
-        (uint256 totalFeeAmount, uint256 count) = (0, fees.length);
+    /// @param immediateFees Allocation of the fees to be sent immediately
+    /// @param delayedFees Allocation of the fees to be allocated
+    function _processFees(
+        address campaign,
+        address token,
+        Payout[] memory immediateFees,
+        Allocation[] memory delayedFees
+    ) internal {
+        uint256 count = immediateFees.length;
+        for (uint256 i = 0; i < count; i++) {
+            (address recipient, uint256 amount) = (immediateFees[i].recipient, immediateFees[i].amount);
+            if (amount == 0) continue;
+            Campaign(payable(campaign)).sendTokens(token, recipient, amount);
+            emit FeeSent(campaign, token, recipient, amount, immediateFees[i].extraData);
+        }
+
+        count = delayedFees.length;
+        uint256 totalFeeAmount = 0;
         mapping(bytes32 key => uint256 amount) storage _allocatedFee = allocatedFee[campaign][token];
         for (uint256 i = 0; i < count; i++) {
-            (bytes32 key, uint256 amount) = (fees[i].key, fees[i].amount);
-            if (amount > 0) {
-                totalFeeAmount += amount;
-                _allocatedFee[key] += amount;
-                emit FeeAllocated(campaign, token, key, amount, fees[i].extraData);
-            }
+            (bytes32 key, uint256 amount) = (delayedFees[i].key, delayedFees[i].amount);
+            if (amount == 0) continue;
+            totalFeeAmount += amount;
+            _allocatedFee[key] += amount;
+            emit FeeAllocated(campaign, token, key, amount, delayedFees[i].extraData);
         }
         totalAllocatedFees[campaign][token] += totalFeeAmount;
     }

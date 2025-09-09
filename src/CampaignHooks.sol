@@ -45,13 +45,18 @@ abstract contract CampaignHooks {
     /// @param hookData Data for the campaign hook
     ///
     /// @return payouts Array of payouts to be sent
-    /// @return fees Array of fees to be paid
+    /// @return immediateFees Array of fees to be send immediately
+    /// @return delayedFees Array of fees to be allocated
     ///
     /// @dev Only callable by the flywheel contract
     function onSend(address sender, address campaign, address token, bytes calldata hookData)
         external
         onlyFlywheel
-        returns (Flywheel.Payout[] memory payouts, Flywheel.Allocation[] memory fees)
+        returns (
+            Flywheel.Payout[] memory payouts,
+            Flywheel.Payout[] memory immediateFees,
+            Flywheel.Allocation[] memory delayedFees
+        )
     {
         return _onSend(sender, campaign, token, hookData);
     }
@@ -100,13 +105,18 @@ abstract contract CampaignHooks {
     /// @param hookData Data for the campaign hook
     ///
     /// @return distributions Array of distributions to be distributed
-    /// @return fees Array of fees to be paid
+    /// @return immediateFees Array of fees to be sent immediately
+    /// @return delayedFees Array of fees to be allocated
     ///
     /// @dev Only callable by the flywheel contract
     function onDistribute(address sender, address campaign, address token, bytes calldata hookData)
         external
         onlyFlywheel
-        returns (Flywheel.Distribution[] memory distributions, Flywheel.Allocation[] memory fees)
+        returns (
+            Flywheel.Distribution[] memory distributions,
+            Flywheel.Payout[] memory immediateFees,
+            Flywheel.Allocation[] memory delayedFees
+        )
     {
         return _onDistribute(sender, campaign, token, hookData);
     }
@@ -197,11 +207,16 @@ abstract contract CampaignHooks {
     /// @param hookData Data for the campaign hook
     ///
     /// @return payouts Array of payouts to be sent
-    /// @return fees Array of fees to be paid
+    /// @return immediateFees Array of fees to be send immediately
+    /// @return delayedFees Array of fees to be allocated and distributed later
     function _onSend(address sender, address campaign, address token, bytes calldata hookData)
         internal
         virtual
-        returns (Flywheel.Payout[] memory payouts, Flywheel.Allocation[] memory fees)
+        returns (
+            Flywheel.Payout[] memory payouts,
+            Flywheel.Payout[] memory immediateFees,
+            Flywheel.Allocation[] memory delayedFees
+        )
     {
         revert Unsupported();
     }
@@ -246,11 +261,16 @@ abstract contract CampaignHooks {
     /// @param hookData Data for the campaign hook
     ///
     /// @return distributions Array of distributions to be distributed
-    /// @return fees Array of fees to be paid
+    /// @return immediateFees Array of fees to be sent immediately
+    /// @return delayedFees Array of fees to be allocated and distributed later
     function _onDistribute(address sender, address campaign, address token, bytes calldata hookData)
         internal
         virtual
-        returns (Flywheel.Distribution[] memory distributions, Flywheel.Allocation[] memory fees)
+        returns (
+            Flywheel.Distribution[] memory distributions,
+            Flywheel.Payout[] memory immediateFees,
+            Flywheel.Allocation[] memory delayedFees
+        )
     {
         revert Unsupported();
     }
