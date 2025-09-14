@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity 0.8.29;
 
-import {CashbackRewardsBase} from "./CashbackRewardsBase.sol";
 import {AuthCaptureEscrow} from "commerce-payments/AuthCaptureEscrow.sol";
-import {Flywheel} from "../../src/Flywheel.sol";
-import {CashbackRewards} from "../../src/hooks/CashbackRewards.sol";
-import {SimpleRewards} from "../../src/hooks/SimpleRewards.sol";
 
-contract OnDistributeTest is CashbackRewardsBase {
+import {CashbackRewardsTest} from "../../../lib/CashbackRewardsTest.sol";
+
+import {Flywheel} from "../../../../src/Flywheel.sol";
+import {CashbackRewards} from "../../../../src/hooks/CashbackRewards.sol";
+import {SimpleRewards} from "../../../../src/hooks/SimpleRewards.sol";
+
+contract OnDistributeTest is CashbackRewardsTest {
     function test_revertsOnUnauthorizedCaller(
         uint120 paymentAmount,
         uint120 distributeAmount,

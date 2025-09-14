@@ -2,17 +2,19 @@
 pragma solidity ^0.8.29;
 
 import {Test, console} from "forge-std/Test.sol";
-import {Flywheel} from "../src/Flywheel.sol";
-import {AdConversion} from "../src/hooks/AdConversion.sol";
-import {BuilderCodes} from "../src/BuilderCodes.sol";
-import {DummyERC20} from "./mocks/DummyERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {FlywheelTestHelpers} from "./helpers/FlywheelTestHelpers.sol";
+
+import {MockERC20} from "../lib/mocks/MockERC20.sol";
+import {FlywheelTest} from "../lib/FlywheelTest.sol";
+
+import {Flywheel} from "../../src/Flywheel.sol";
+import {AdConversion} from "../../src/hooks/AdConversion.sol";
+import {BuilderCodes} from "../../src/BuilderCodes.sol";
 
 /// @title Flywheel Security Test Suite
 /// @notice Security-focused testing with attack scenarios and vulnerability analysis
 /// @dev Implements comprehensive security testing patterns from MCP guidelines
-contract FlywheelSecurityTest is FlywheelTestHelpers {
+contract FlywheelAttackTest is FlywheelTest {
     AdConversion public testHook;
 
     function setUp() public {

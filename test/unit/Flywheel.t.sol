@@ -2,17 +2,18 @@
 pragma solidity ^0.8.29;
 
 import {Test} from "forge-std/Test.sol";
-import {Flywheel} from "../src/Flywheel.sol";
-import {BuilderCodes} from "../src/BuilderCodes.sol";
-import {Campaign} from "../src/Campaign.sol";
-import {AdConversion} from "../src/hooks/AdConversion.sol";
-import {SimpleRewards} from "../src/hooks/SimpleRewards.sol";
-import {DummyERC20} from "./mocks/DummyERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-import {FlywheelTestHelpers} from "./helpers/FlywheelTestHelpers.sol";
+import {FlywheelTest} from "../lib/FlywheelTest.sol";
+import {MockERC20} from "../lib/mocks/MockERC20.sol";
 
-contract FlywheelTest is FlywheelTestHelpers {
+import {Campaign} from "../../src/Campaign.sol";
+import {BuilderCodes} from "../../src/BuilderCodes.sol";
+import {Flywheel} from "../../src/Flywheel.sol";
+import {AdConversion} from "../../src/hooks/AdConversion.sol";
+import {SimpleRewards} from "../../src/hooks/SimpleRewards.sol";
+
+contract FlywheelContractTest is FlywheelTest {
     BuilderCodes public publisherRegistry;
     AdConversion public hook;
 
@@ -35,7 +36,7 @@ contract FlywheelTest is FlywheelTestHelpers {
         address[] memory initialHolders = new address[](2);
         initialHolders[0] = advertiser;
         initialHolders[1] = attributionProvider;
-        token = new DummyERC20(initialHolders);
+        token = new MockERC20(initialHolders);
 
         // Deploy Flywheel
         flywheel = new Flywheel();
@@ -528,7 +529,7 @@ contract FlywheelTest is FlywheelTestHelpers {
         // Deploy a second token
         address[] memory holders = new address[](1);
         holders[0] = advertiser;
-        DummyERC20 token2 = new DummyERC20(holders);
+        MockERC20 token2 = new MockERC20(holders);
 
         // Activate campaign
         vm.prank(attributionProvider);
@@ -591,7 +592,7 @@ contract FlywheelTest is FlywheelTestHelpers {
         // Deploy second token
         address[] memory holders = new address[](1);
         holders[0] = advertiser;
-        DummyERC20 token2 = new DummyERC20(holders);
+        MockERC20 token2 = new MockERC20(holders);
 
         // Set 10% fee for this test and create new campaign
         vm.prank(attributionProvider);
@@ -820,7 +821,7 @@ contract FlywheelTest is FlywheelTestHelpers {
 
         address[] memory holders = new address[](1);
         holders[0] = advertiser;
-        DummyERC20 feeToken = new DummyERC20(holders);
+        MockERC20 feeToken = new MockERC20(holders);
 
         // Transfer tokens for campaign funding
         vm.prank(advertiser);
@@ -885,8 +886,8 @@ contract FlywheelTest is FlywheelTestHelpers {
         // Deploy two different tokens
         address[] memory holders = new address[](1);
         holders[0] = isolationManager;
-        DummyERC20 tokenA = new DummyERC20(holders);
-        DummyERC20 tokenB = new DummyERC20(holders);
+        MockERC20 tokenA = new MockERC20(holders);
+        MockERC20 tokenB = new MockERC20(holders);
 
         // Fund both campaigns with both tokens
         vm.startPrank(isolationManager);
@@ -1202,7 +1203,7 @@ contract FlywheelTest is FlywheelTestHelpers {
         // Deploy second token for multi-token testing
         address[] memory holders = new address[](1);
         holders[0] = manager;
-        DummyERC20 token2 = new DummyERC20(holders);
+        MockERC20 token2 = new MockERC20(holders);
 
         // Transfer tokens to manager for funding campaign
         vm.prank(advertiser);
@@ -1269,8 +1270,8 @@ contract FlywheelTest is FlywheelTestHelpers {
         // Deploy additional tokens with different decimals
         address[] memory holders = new address[](1);
         holders[0] = manager;
-        DummyERC20 usdc = new DummyERC20(holders); // 6 decimals
-        DummyERC20 weth = new DummyERC20(holders); // 18 decimals (from DummyERC20 default)
+        MockERC20 usdc = new MockERC20(holders); // 6 decimals
+        MockERC20 weth = new MockERC20(holders); // 18 decimals (from MockERC20 default)
 
         // Transfer tokens to manager for funding campaign
         vm.prank(advertiser);

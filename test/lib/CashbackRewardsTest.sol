@@ -1,17 +1,18 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity 0.8.29;
 
+import {Test} from "forge-std/Test.sol";
 import {AuthCaptureEscrow} from "commerce-payments/AuthCaptureEscrow.sol";
 import {ERC3009PaymentCollector} from "commerce-payments/collectors/ERC3009PaymentCollector.sol";
 import {IERC3009} from "commerce-payments/interfaces/IERC3009.sol";
-import {MockERC3009Token} from "../../lib/commerce-payments/test/mocks/MockERC3009Token.sol";
 import {OperatorRefundCollector} from "commerce-payments/collectors/OperatorRefundCollector.sol";
-import {Test} from "forge-std/Test.sol";
+
+import {MockERC3009Token} from "../../lib/commerce-payments/test/mocks/MockERC3009Token.sol";
 
 import {CashbackRewards} from "../../src/hooks/CashbackRewards.sol";
 import {Flywheel} from "../../src/Flywheel.sol";
 
-contract CashbackRewardsBase is Test {
+contract CashbackRewardsTest is Test {
     // Test bounds constants when necessary for fuzzing
     uint120 internal constant MIN_PAYMENT_AMOUNT = 1e4; // 0.01 USDC
     uint120 internal constant MAX_PAYMENT_AMOUNT = type(uint120).max; // Maximum possible payment in escrow system

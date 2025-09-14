@@ -3,19 +3,20 @@ pragma solidity ^0.8.29;
 
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
-import {Flywheel} from "../src/Flywheel.sol";
-import {BuilderCodes} from "../src/BuilderCodes.sol";
-import {AdConversion} from "../src/hooks/AdConversion.sol";
-import {DummyERC20} from "./mocks/DummyERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-import {PublisherTestSetup, PublisherSetupHelper} from "./helpers/PublisherSetupHelper.sol";
+import {PublisherTestSetup, PublisherSetupHelper} from "../../lib/PublisherSetupHelper.sol";
+import {MockERC20} from "../../lib/mocks/MockERC20.sol";
+
+import {Flywheel} from "../../../src/Flywheel.sol";
+import {BuilderCodes} from "../../../src/BuilderCodes.sol";
+import {AdConversion} from "../../../src/hooks/AdConversion.sol";
 
 contract AdConversionTest is PublisherTestSetup {
     Flywheel public flywheel;
     BuilderCodes public publisherRegistry;
     AdConversion public hook;
-    DummyERC20 public token;
+    MockERC20 public token;
 
     address public owner = address(0x1);
     address public advertiser = address(0x2);
@@ -44,7 +45,7 @@ contract AdConversionTest is PublisherTestSetup {
         // Deploy token with initial holders
         address[] memory initialHolders = new address[](1);
         initialHolders[0] = address(this);
-        token = new DummyERC20(initialHolders);
+        token = new MockERC20(initialHolders);
 
         // Register randomUser as a publisher with ref code
         vm.prank(owner);

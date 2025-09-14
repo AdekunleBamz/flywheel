@@ -2,17 +2,18 @@
 pragma solidity ^0.8.29;
 
 import {Test, console} from "forge-std/Test.sol";
-import {AdConversion} from "../src/hooks/AdConversion.sol";
-import {Flywheel} from "../src/Flywheel.sol";
-
-import {DummyERC20} from "./mocks/DummyERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {AdConversionTestHelpers} from "./helpers/AdConversionTestHelpers.sol";
+
+import {MockERC20} from "../lib/mocks/MockERC20.sol";
+import {AdConversionTest} from "../lib/AdConversionTest.sol";
+
+import {AdConversion} from "../../src/hooks/AdConversion.sol";
+import {Flywheel} from "../../src/Flywheel.sol";
 
 /// @title AdConversion Security Test Suite
 /// @notice Security-focused testing with attack scenarios and vulnerability analysis
 /// @dev Implements comprehensive security testing patterns from MCP guidelines
-contract AdConversionSecurityTest is AdConversionTestHelpers {
+contract AdConversionAttackTest is AdConversionTest {
     function setUp() public {
         _setupAdConversionTest();
     }
