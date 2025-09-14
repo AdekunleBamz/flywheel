@@ -4,7 +4,7 @@ pragma solidity 0.8.29;
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 
-import {SimpleRewards} from "../src/hooks/SimpleRewards.sol";
+import {SimpleRewards} from "../../src/hooks/SimpleRewards.sol";
 
 /// @notice Script for deploying the SimpleRewards hook contract
 contract DeploySimpleRewards is Script {
@@ -17,7 +17,7 @@ contract DeploySimpleRewards is Script {
 
         // Deploy SimpleRewards hook
         SimpleRewards hook = new SimpleRewards(flywheel);
-        console.log("SimpleRewards hook deployed at:", address(hook));
+        console.log("SimpleRewards deployed at:", address(hook));
 
         vm.stopBroadcast();
 
