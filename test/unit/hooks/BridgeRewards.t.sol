@@ -9,6 +9,7 @@ import {MockERC3009Token} from "../../../lib/commerce-payments/test/mocks/MockER
 import {BridgeRewards} from "../../../src/hooks/BridgeRewards.sol";
 import {BuilderCodes} from "../../../src/BuilderCodes.sol";
 import {Flywheel} from "../../../src/Flywheel.sol";
+import {Constants} from "../../../src/Constants.sol";
 
 contract BridgeRewardsTest is Test {
     Flywheel public flywheel;
@@ -228,5 +229,47 @@ contract BridgeRewardsTest is Test {
 
         // Should not revert - the hook allows anyone to trigger metadata updates
         // This is useful for refreshing cached metadata even though the URI is fixed
+    }
+
+    // =============================================================
+    //                    NATIVE TOKEN TESTS
+    // =============================================================
+
+    function test_send_nativeToken_succeeds() public {
+        // Fund campaign with native token
+        vm.deal(bridgeRewardsCampaign, 1 ether);
+
+        // Prepare hook data (user, code, fee)
+        uint16 feeBps = 100; // 1%
+        bytes memory hookData = abi.encode(user, TEST_CODE, feeBps);
+
+        // Expected amounts based on contract logic
+        uint256 startingBalance = bridgeRewardsCampaign.balance; // 1 ether
+        uint256 expectedFee = (startingBalance * feeBps) / 10000;
+        uint256 expectedUser = startingBalance - expectedFee;
+
+        uint256 userBefore = user.balance;
+        uint256 builderBefore = builderPayout.balance;
+
+        flywheel.send(bridgeRewardsCampaign, Constants.NATIVE_TOKEN, hookData);
+
+        assertEq(user.balance, userBefore + expectedUser, "User should receive balance minus fee");
+        assertEq(builderPayout.balance, builderBefore + expectedFee, "Builder should receive fee");
+        assertEq(bridgeRewardsCampaign.balance, 0, "Campaign should be empty");
+    }
+
+    function test_withdraw_nativeToken_succeeds() public {
+        // Fund campaign with native token
+        vm.deal(bridgeRewardsCampaign, 1 ether);
+
+        // Prepare withdrawal hook data
+        Flywheel.Payout memory payout = Flywheel.Payout({recipient: user, amount: 1 ether, extraData: ""});
+        bytes memory hookData = abi.encode(payout);
+
+        // Execute withdraw; assert balances updated
+        uint256 beforeUser = user.balance;
+        flywheel.withdrawFunds(bridgeRewardsCampaign, Constants.NATIVE_TOKEN, hookData);
+        assertEq(user.balance, beforeUser + 1 ether);
+        assertEq(bridgeRewardsCampaign.balance, 0);
     }
 }

@@ -7,6 +7,7 @@ import {ReentrancyGuardTransient} from "solady/utils/ReentrancyGuardTransient.so
 
 import {Campaign} from "./Campaign.sol";
 import {CampaignHooks} from "./CampaignHooks.sol";
+import {Constants} from "./Constants.sol";
 
 /// @title Flywheel
 ///
@@ -442,7 +443,7 @@ contract Flywheel is ReentrancyGuardTransient {
         uint256 requiredSolvency = campaignStatus(campaign) == CampaignStatus.FINALIZED
             ? totalAllocatedFees[campaign][token]
             : totalAllocatedFees[campaign][token] + totalAllocatedPayouts[campaign][token];
-        if (IERC20(token).balanceOf(campaign) < requiredSolvency) revert InsufficientCampaignFunds();
+        if (_campaignTokenBalance(campaign, token) < requiredSolvency) revert InsufficientCampaignFunds();
     }
 
     /// @notice Updates the status of a campaign
@@ -574,7 +575,15 @@ contract Flywheel is ReentrancyGuardTransient {
     /// @param token Address of the token to check
     function _assertCampaignSolvency(address campaign, address token) internal {
         uint256 totalAllocated = totalAllocatedPayouts[campaign][token] + totalAllocatedFees[campaign][token];
-        if (IERC20(token).balanceOf(campaign) < totalAllocated) revert InsufficientCampaignFunds();
+        if (_campaignTokenBalance(campaign, token) < totalAllocated) revert InsufficientCampaignFunds();
+    }
+
+    /// @notice Returns the campaign balance for a given token, supporting native token via EIP-7528 convention
+    ///
+    /// @param campaign Address of the campaign
+    /// @param token Address of the token, or native token sentinel
+    function _campaignTokenBalance(address campaign, address token) internal view returns (uint256) {
+        return token == Constants.NATIVE_TOKEN ? campaign.balance : IERC20(token).balanceOf(campaign);
     }
 
     /// @notice Returns the salt for a campaign

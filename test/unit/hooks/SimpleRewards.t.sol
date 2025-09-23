@@ -7,6 +7,7 @@ import {MockERC20} from "../../lib/mocks/MockERC20.sol";
 
 import {Flywheel} from "../../../src/Flywheel.sol";
 import {SimpleRewards} from "../../../src/hooks/SimpleRewards.sol";
+import {Constants} from "../../../src/Constants.sol";
 
 contract SimpleRewardsTest is Test {
     Flywheel public flywheel;
@@ -41,6 +42,44 @@ contract SimpleRewardsTest is Test {
     // NOTE: Core campaign creation is tested in Flywheel.t.sol
     // This focuses on SimpleRewards-specific campaign setup
 
+    // =============================================================
+    //                    NATIVE TOKEN TESTS
+    // =============================================================
+
+    function test_allocate_nativeToken_succeeds() public {
+        // Fund campaign with native token and activate
+        vm.deal(campaign, 1 ether);
+        vm.prank(manager);
+        flywheel.updateStatus(campaign, Flywheel.CampaignStatus.ACTIVE, "");
+
+        // Prepare allocation in native token
+        Flywheel.Payout[] memory allocations = new Flywheel.Payout[](1);
+        allocations[0] = Flywheel.Payout({recipient: recipient1, amount: 0.5 ether, extraData: ""});
+
+        vm.prank(manager);
+        flywheel.allocate(campaign, Constants.NATIVE_TOKEN, abi.encode(allocations));
+        bytes32 key = bytes32(bytes20(recipient1));
+        assertEq(flywheel.allocatedPayout(campaign, Constants.NATIVE_TOKEN, key), 0.5 ether);
+    }
+
+    function test_withdraw_nativeToken_succeeds() public {
+        // Fund campaign with native token
+        vm.deal(campaign, 1 ether);
+
+        // Prepare withdrawal hook data
+        Flywheel.Payout memory payout = Flywheel.Payout({recipient: manager, amount: 1 ether, extraData: ""});
+
+        // Succeeds now; assert balances updated
+        uint256 beforeManager = manager.balance;
+        vm.prank(manager);
+        flywheel.withdrawFunds(campaign, Constants.NATIVE_TOKEN, abi.encode(payout));
+        assertEq(manager.balance, beforeManager + 1 ether);
+        assertEq(campaign.balance, 0);
+    }
+
+    // =============================================================
+    //                    TOKEN TESTS
+    // =============================================================
     function test_send_success() public {
         // Fund campaign
         vm.prank(manager);
@@ -608,16 +647,22 @@ contract SimpleRewardsTest is Test {
 
         // Use case 3: Educational content creation (allocate/distribute workflow)
         Flywheel.Payout[] memory allocations = new Flywheel.Payout[](1);
-        allocations[0] =
-            Flywheel.Payout({recipient: recipient1, amount: BASE_REWARD * 2, extraData: "educational-tutorial-creation"});
+        allocations[0] = Flywheel.Payout({
+            recipient: recipient1,
+            amount: BASE_REWARD * 2,
+            extraData: "educational-tutorial-creation"
+        });
 
         // Allocate for review
         vm.prank(manager);
         flywheel.allocate(campaign, address(token), abi.encode(allocations));
 
         Flywheel.Payout[] memory distributions = new Flywheel.Payout[](1);
-        distributions[0] =
-            Flywheel.Payout({recipient: recipient1, amount: BASE_REWARD * 2, extraData: "educational-tutorial-creation"});
+        distributions[0] = Flywheel.Payout({
+            recipient: recipient1,
+            amount: BASE_REWARD * 2,
+            extraData: "educational-tutorial-creation"
+        });
 
         uint256 balanceBeforeDistribution = token.balanceOf(recipient1);
 
