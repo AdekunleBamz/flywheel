@@ -567,7 +567,7 @@ Flywheel provides four fundamental payout operations that hooks can implement ba
 
 ### **send()** - Immediate Payout
 
-Transfers tokens directly to recipients immediately. Used for real-time rewards where no holding period is needed.
+Transfers tokens directly to recipients immediately. Used for real-time rewards where no holding period is needed. Payouts must succeed or the entire transaction reverts.
 
 ### **allocate()** - Reserve Future Payout
 
@@ -581,6 +581,14 @@ Cancels previously allocated tokens identified by `bytes32` keys, returning them
 
 Allows recipients to claim previously allocated tokens identified by `bytes32` keys. Converts "pending" allocations to actual token transfers. Can also generate fees during distribution.
 
+### **Error Handling**
+
+The protocol uses a fail-fast approach for send operations:
+
+- All token transfers must succeed or the entire transaction reverts
+- There is no fallback allocation for failed sends - transactions either complete fully or revert
+- This ensures atomic operation success and prevents partial state issues
+
 ## Hook Implementation Comparison
 
 Comprehensive comparison of hook implementations, including payout functions, access control, and operational characteristics:
@@ -593,7 +601,7 @@ Comprehensive comparison of hook implementations, including payout functions, ac
 | **Fees**            | ✅ Attribution provider fees                                 | ❌ No fees                                                    | ✅ Builder code owner fees (max 2%)                       | ❌ No fees                                                   |
 | **Publishers**      | ✅ Via BuilderCodes                                          | ❌ Direct to users                                            | ✅ Via BuilderCodes (fee recipients)                      | ❌ Direct to recipients                                      |
 | **Fund Withdrawal** | Advertiser only (FINALIZED)                                  | Owner only                                                    | Anyone (withdrawFunds for accidents)                      | Owner only                                                   |
-| **send()**          | ✅ Immediate publisher payouts<br/>Supports attribution fees | ✅ Direct buyer cashback<br/>Tracks distributed amounts       | ✅ Bridge rewards + builder fees<br/>Native token support<br/>Graceful failure handling | ✅ Direct recipient payouts<br/>Simple pass-through          |
+| **send()**          | ✅ Immediate publisher payouts<br/>Supports attribution fees<br/>Fail-fast on errors | ✅ Direct buyer cashback<br/>Tracks distributed amounts<br/>Fail-fast on errors | ✅ Bridge rewards + builder fees<br/>Native token support<br/>Fail-fast on errors | ✅ Direct recipient payouts<br/>Simple pass-through<br/>Fail-fast on errors |
 | **allocate()**      | ❌ Not implemented                                           | ✅ Reserve cashback for claims<br/>Tracks allocated amounts   | ❌ Not implemented                                        | ✅ Reserve payouts for claims                                |
 | **distribute()**    | ❌ Not implemented                                           | ✅ Claim allocated cashback<br/>Supports fees on distribution | ❌ Not implemented                                        | ✅ Claim allocated rewards<br/>Supports fees on distribution |
 | **deallocate()**    | ❌ Not implemented                                           | ✅ Cancel unclaimed cashback<br/>Returns to campaign funds    | ❌ Not implemented                                        | ✅ Cancel unclaimed rewards                                  |

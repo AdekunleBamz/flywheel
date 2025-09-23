@@ -258,11 +258,7 @@ contract AdConversion is CampaignHooks {
     function _onSend(address attributionProvider, address campaign, address payoutToken, bytes calldata hookData)
         internal
         override
-        returns (
-            Flywheel.Payout[] memory payouts,
-            Flywheel.Payout[] memory, /*immediateFees*/
-            Flywheel.Allocation[] memory delayedFees
-        )
+        returns (Flywheel.Payout[] memory payouts, Flywheel.Distribution[] memory fees, bool sendFeesNow)
     {
         // Validate that the caller is the authorized attribution provider for this campaign
         if (attributionProvider != state[campaign].attributionProvider) revert Unauthorized();
@@ -366,9 +362,14 @@ contract AdConversion is CampaignHooks {
 
         // Add delayed fee for attribution provider to claim later
         if (feeAmount > 0) {
-            delayedFees = new Flywheel.Allocation[](1);
-            delayedFees[0] =
-                Flywheel.Allocation({key: bytes32(bytes20(attributionProvider)), amount: feeAmount, extraData: ""});
+            sendFeesNow = false;
+            fees = new Flywheel.Distribution[](1);
+            fees[0] = Flywheel.Distribution({
+                key: bytes32(bytes20(attributionProvider)),
+                recipient: attributionProvider,
+                amount: feeAmount,
+                extraData: ""
+            });
         }
     }
 

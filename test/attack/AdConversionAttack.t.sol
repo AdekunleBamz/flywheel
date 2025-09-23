@@ -166,14 +166,11 @@ contract AdConversionAttackTest is AdConversionTest {
         bytes memory emptyData = abi.encode(new AdConversion.Attribution[](0));
 
         vm.prank(address(flywheel));
-        (
-            Flywheel.Payout[] memory payouts,
-            Flywheel.Payout[] memory immediateFees,
-            Flywheel.Allocation[] memory delayedFees
-        ) = hook.onSend(ATTRIBUTION_PROVIDER, campaign, address(token), emptyData);
+        (Flywheel.Payout[] memory payouts, Flywheel.Distribution[] memory fees, bool sendFeesNow) =
+            hook.onSend(ATTRIBUTION_PROVIDER, campaign, address(token), emptyData);
         assertEq(payouts.length, 0);
-        assertEq(immediateFees.length, 0);
-        assertEq(delayedFees.length, 0);
+        assertEq(fees.length, 0);
+        assertTrue(!sendFeesNow);
 
         // Test malformed attribution data - use try/catch to handle graceful errors
         vm.prank(address(flywheel));

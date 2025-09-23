@@ -608,22 +608,16 @@ contract SimpleRewardsTest is Test {
 
         // Use case 3: Educational content creation (allocate/distribute workflow)
         Flywheel.Payout[] memory allocations = new Flywheel.Payout[](1);
-        allocations[0] = Flywheel.Payout({
-            recipient: recipient1,
-            amount: BASE_REWARD * 2,
-            extraData: "educational-tutorial-creation"
-        });
+        allocations[0] =
+            Flywheel.Payout({recipient: recipient1, amount: BASE_REWARD * 2, extraData: "educational-tutorial-creation"});
 
         // Allocate for review
         vm.prank(manager);
         flywheel.allocate(campaign, address(token), abi.encode(allocations));
 
         Flywheel.Payout[] memory distributions = new Flywheel.Payout[](1);
-        distributions[0] = Flywheel.Payout({
-            recipient: recipient1,
-            amount: BASE_REWARD * 2,
-            extraData: "educational-tutorial-creation"
-        });
+        distributions[0] =
+            Flywheel.Payout({recipient: recipient1, amount: BASE_REWARD * 2, extraData: "educational-tutorial-creation"});
 
         uint256 balanceBeforeDistribution = token.balanceOf(recipient1);
 

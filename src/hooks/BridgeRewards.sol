@@ -54,11 +54,7 @@ contract BridgeRewards is CampaignHooks {
     function _onSend(address sender, address campaign, address token, bytes calldata hookData)
         internal
         override
-        returns (
-            Flywheel.Payout[] memory payouts,
-            Flywheel.Payout[] memory immediateFees,
-            Flywheel.Allocation[] memory /*delayedFees*/
-        )
+        returns (Flywheel.Payout[] memory payouts, Flywheel.Distribution[] memory fees, bool sendFeesNow)
     {
         (address user, bytes32 code, uint16 feeBps) = abi.decode(hookData, (address, bytes32, uint16));
 
@@ -80,13 +76,33 @@ contract BridgeRewards is CampaignHooks {
 
         // Prepare fee if applicable
         if (feeAmount > 0) {
-            immediateFees = new Flywheel.Payout[](1);
-            immediateFees[0] = Flywheel.Payout({
+            sendFeesNow = true;
+            fees = new Flywheel.Distribution[](1);
+            fees[0] = Flywheel.Distribution({
+                key: code, // allow fee send to fallback to builder code
                 recipient: builderCodes.payoutAddress(uint256(code)), // if payoutAddress misconfigured, builder loses their fee
                 amount: feeAmount,
                 extraData: ""
             });
         }
+    }
+
+    /// @inheritdoc CampaignHooks
+    ///
+    /// @dev Will only need to use this function if the initial fee send fails
+    function _onDistributeFees(address sender, address campaign, address token, bytes calldata hookData)
+        internal
+        override
+        returns (Flywheel.Distribution[] memory distributions)
+    {
+        bytes32 code = bytes32(hookData);
+        distributions = new Flywheel.Distribution[](1);
+        distributions[0] = Flywheel.Distribution({
+            recipient: builderCodes.payoutAddress(uint256(code)),
+            key: code,
+            amount: flywheel.allocatedFee(campaign, token, code),
+            extraData: ""
+        });
     }
 
     /// @inheritdoc CampaignHooks
