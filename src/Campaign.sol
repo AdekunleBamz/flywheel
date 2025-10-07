@@ -1,24 +1,27 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.29;
 
-import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {Flywheel} from "./Flywheel.sol";
 import {Constants} from "./Constants.sol";
+import {Flywheel} from "./Flywheel.sol";
 
 /// @title Campaign
 ///
 /// @notice Holds funds for a single campaign
 ///
 /// @dev Deployed on demand by protocol via clones
+/// @dev Follows ERC-7572 convention for contract metadata
+///
+/// @author Coinbase (https://github.com/base/flywheel)
 contract Campaign {
-    /// @notice Address that created this token store
+    /// @notice Flywheel contract address
     address public immutable FLYWHEEL;
 
     /// @notice Emitted when the contract URI is updated
     event ContractURIUpdated();
 
-    /// @notice Call sender is not flywheel
+    /// @notice Call sender is not Flywheel
     error OnlyFlywheel();
 
     /// @notice Constructor
@@ -29,7 +32,9 @@ contract Campaign {
     /// @notice Allow receiving native token
     receive() external payable {}
 
-    /// @notice Send tokens to a recipient, called by escrow during capture/refund
+    /// @notice Send tokens to a recipient
+    ///
+    /// @dev Delegates all logic of when to send tokens to Flywheel
     ///
     /// @param token The token being received
     /// @param recipient Address to receive the tokens

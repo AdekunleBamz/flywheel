@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.29;
 
-import {Flywheel} from "../../../src/Flywheel.sol";
 import {Constants} from "../../../src/Constants.sol";
+import {Flywheel} from "../../../src/Flywheel.sol";
 import {FlywheelTest} from "../../lib/FlywheelTestBase.sol";
-import {Vm} from "forge-std/Vm.sol";
-import {RevertingReceiver} from "../../lib/mocks/RevertingReceiver.sol";
+
 import {FailingERC20} from "../../lib/mocks/FailingERC20.sol";
+import {RevertingReceiver} from "../../lib/mocks/RevertingReceiver.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 /// @title SendTest
 /// @notice Tests for Flywheel.send
@@ -312,9 +313,7 @@ contract SendTest is FlywheelTest {
         for (uint256 i = 0; i < logs.length; i++) {
             bool isFromFlywheel = logs[i].emitter == address(flywheel);
             bool isPayoutSent = logs[i].topics.length > 0 && logs[i].topics[0] == payoutSentSig;
-            if (isFromFlywheel && isPayoutSent) {
-                revert("PayoutSent was emitted for zero-amount payout");
-            }
+            if (isFromFlywheel && isPayoutSent) revert("PayoutSent was emitted for zero-amount payout");
         }
     }
 
@@ -364,9 +363,7 @@ contract SendTest is FlywheelTest {
         for (uint256 i = 0; i < logs.length; i++) {
             bool isFromFlywheel = logs[i].emitter == address(flywheel);
             bool isPayoutSent = logs[i].topics.length > 0 && logs[i].topics[0] == payoutSentSig;
-            if (isFromFlywheel && isPayoutSent) {
-                payoutSentCount++;
-            }
+            if (isFromFlywheel && isPayoutSent) payoutSentCount++;
         }
         assertEq(payoutSentCount, 1, "Should emit exactly one PayoutSent event for non-zero amount");
         assertEq(mockToken.balanceOf(campaign), 0);
@@ -586,12 +583,8 @@ contract SendTest is FlywheelTest {
             bool isFromFlywheel = logs[i].emitter == address(flywheel);
             bool isFeeAllocated = logs[i].topics.length > 0 && logs[i].topics[0] == feeAllocatedSig;
             bool isFeeTransferFailed = logs[i].topics.length > 0 && logs[i].topics[0] == feeTransferFailedSig;
-            if (isFromFlywheel && isFeeAllocated) {
-                revert("FeeAllocated was emitted for zero-amount fee");
-            }
-            if (isFromFlywheel && isFeeTransferFailed) {
-                revert("FeeTransferFailed was emitted for zero-amount fee");
-            }
+            if (isFromFlywheel && isFeeAllocated) revert("FeeAllocated was emitted for zero-amount fee");
+            if (isFromFlywheel && isFeeTransferFailed) revert("FeeTransferFailed was emitted for zero-amount fee");
         }
     }
 

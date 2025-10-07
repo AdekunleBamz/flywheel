@@ -3,8 +3,8 @@ pragma solidity ^0.8.29;
 
 import {AuthCaptureEscrow} from "commerce-payments/AuthCaptureEscrow.sol";
 
-import {Flywheel} from "../Flywheel.sol";
 import {CampaignHooks} from "../CampaignHooks.sol";
+import {Flywheel} from "../Flywheel.sol";
 import {SimpleRewards} from "./SimpleRewards.sol";
 
 /// @title CashbackRewards
@@ -12,15 +12,15 @@ import {SimpleRewards} from "./SimpleRewards.sol";
 /// @notice Reward buyers for their purchases made with the Commerce Payments Protocol (https://github.com/base/commerce-payments)
 ///
 /// @dev Rewards must be made in the same token as the original payment token (cashback)
-/// @dev Rewards can be made in any amount (supports %, fixed, etc.)
-/// @dev Maximum reward percentage can be optionally configured per campaign
+/// @dev Rewards can be made in any amount (supports %-based, fixed, etc.)
 /// @dev Rewards can be made on any payment (supports custom filtering for platforms, wallets, merchants, etc.)
+/// @dev Rewards can be capped by a maximum reward percentage configurable per campaign
 ///
-/// @author Coinbase
+/// @author Coinbase (https://github.com/base/flywheel)
 contract CashbackRewards is SimpleRewards {
     /// @notice Operation types for reward validation
     enum RewardOperation {
-        REWARD,
+        SEND,
         ALLOCATE,
         DEALLOCATE,
         DISTRIBUTE
@@ -112,11 +112,11 @@ contract CashbackRewards is SimpleRewards {
         for (uint256 i = 0; i < inputLen; i++) {
             // Validate the payment reward
             (bytes32 paymentInfoHash, uint120 amount, address payer, bytes memory err) =
-                _validatePaymentReward(paymentRewards[i], campaign, token, RewardOperation.REWARD);
+                _validatePaymentReward(paymentRewards[i], campaign, token, RewardOperation.SEND);
 
             // Skip this reward if there was a non-reverted error
             if (err.length > 0) {
-                _revertOrEmitError(revertOnError, paymentInfoHash, amount, RewardOperation.REWARD, err);
+                _revertOrEmitError(revertOnError, paymentInfoHash, amount, RewardOperation.SEND, err);
                 continue;
             }
 
@@ -303,9 +303,7 @@ contract CashbackRewards is SimpleRewards {
             (ESCROW.getHash(paymentReward.paymentInfo), paymentReward.payoutAmount, paymentReward.paymentInfo.payer);
 
         // Check reward amount non-zero
-        if (amount == 0) {
-            return (paymentInfoHash, amount, payer, abi.encodeWithSelector(ZeroPayoutAmount.selector));
-        }
+        if (amount == 0) return (paymentInfoHash, amount, payer, abi.encodeWithSelector(ZeroPayoutAmount.selector));
 
         // Check the token matches the payment token
         if (paymentReward.paymentInfo.token != token) {
