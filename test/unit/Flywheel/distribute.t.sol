@@ -246,6 +246,7 @@ contract DistributeTest is FlywheelTest {
         public
     {
         recipient = boundToValidPayableAddress(recipient);
+        vm.assume(recipient != campaign); // Avoid self-transfers
         allocateAmount = boundToValidAmount(allocateAmount);
         distributeAmount = boundToValidAmount(distributeAmount);
         vm.assume(distributeAmount <= allocateAmount);
@@ -281,6 +282,7 @@ contract DistributeTest is FlywheelTest {
     /// @param distributeAmount Distribution amount
     function test_succeeds_withERC20Token(address recipient, uint256 allocateAmount, uint256 distributeAmount) public {
         recipient = boundToValidPayableAddress(recipient);
+        vm.assume(recipient != campaign); // Avoid self-transfers
         allocateAmount = boundToValidAmount(allocateAmount);
         distributeAmount = boundToValidAmount(distributeAmount);
         vm.assume(distributeAmount <= allocateAmount);
@@ -596,6 +598,7 @@ contract DistributeTest is FlywheelTest {
         feeRecipient2 = boundToValidPayableAddress(feeRecipient2);
         vm.assume(recipient != feeRecipient1);
         vm.assume(recipient != feeRecipient2);
+        vm.assume(feeRecipient1 != feeRecipient2);
         vm.assume(recipient != campaign); // Avoid self-transfers
         vm.assume(feeRecipient1 != campaign); // Avoid campaign as fee recipient
         vm.assume(feeRecipient2 != campaign); // Avoid campaign as fee recipient

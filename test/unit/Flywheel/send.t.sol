@@ -155,6 +155,8 @@ contract SendTest is FlywheelTest {
     ) public {
         recipient = boundToValidPayableAddress(recipient);
         recipient2 = boundToValidPayableAddress(recipient2);
+        vm.assume(recipient != campaign);
+        vm.assume(recipient2 != campaign);
         vm.assume(recipient != recipient2);
         amount = boundToValidAmount(amount);
 
@@ -321,9 +323,11 @@ contract SendTest is FlywheelTest {
     /// @param recipient1 First recipient address (will receive zero amount)
     /// @param recipient2 Second recipient address (will receive non-zero amount)
     /// @param amount Non-zero payout amount
-    function test_ignoresZeroAmountPayouts_intermixedWithNonZero(address recipient1, address recipient2, uint256 amount)
-        public
-    {
+    function test_ignoresZeroAmountPayouts_intermixedWithNonZero(
+        address recipient1,
+        address recipient2,
+        uint256 amount
+    ) public {
         recipient1 = boundToValidPayableAddress(recipient1);
         recipient2 = boundToValidPayableAddress(recipient2);
         vm.assume(recipient1 != recipient2);
@@ -374,9 +378,12 @@ contract SendTest is FlywheelTest {
     /// @param recipient2 Second recipient address
     /// @param amount1 First payout amount
     /// @param amount2 Second payout amount
-    function test_succeeds_withMultiplePayouts(address recipient1, address recipient2, uint256 amount1, uint256 amount2)
-        public
-    {
+    function test_succeeds_withMultiplePayouts(
+        address recipient1,
+        address recipient2,
+        uint256 amount1,
+        uint256 amount2
+    ) public {
         recipient1 = boundToValidPayableAddress(recipient1);
         recipient2 = boundToValidPayableAddress(recipient2);
         vm.assume(recipient1 != recipient2);
@@ -544,9 +551,7 @@ contract SendTest is FlywheelTest {
     /// @param amount Payout amount
     /// @param feeBp Fee basis points
     /// @param feeRecipient Fee recipient address
-    function test_skipsFeesOfZeroAmount(address recipient, uint256 amount, uint256 feeBp, address feeRecipient)
-        public
-    {
+    function test_skipsFeesOfZeroAmount(address recipient, uint256 amount, uint256 feeBp, address feeRecipient) public {
         recipient = boundToValidPayableAddress(recipient);
         feeRecipient = boundToValidPayableAddress(feeRecipient);
         vm.assume(recipient != feeRecipient);
@@ -608,6 +613,10 @@ contract SendTest is FlywheelTest {
         vm.assume(recipient != feeRecipient2);
         vm.assume(recipient != campaign); // Avoid self-transfers
         vm.assume(feeRecipient != campaign); // Avoid campaign as fee recipient
+        vm.assume(feeRecipient2 != address(0));
+        vm.assume(feeRecipient2 != recipient);
+        vm.assume(feeRecipient2 != feeRecipient);
+        vm.assume(feeRecipient2 != campaign); // Avoid campaign as fee recipient
         vm.assume(feeRecipient != feeRecipient2); // Avoid duplicate fee recipients
         amount = boundToValidAmount(amount);
         uint16 feeBpBounded = boundToValidFeeBp(feeBp);
@@ -632,16 +641,10 @@ contract SendTest is FlywheelTest {
         // Create multiple fees
         Flywheel.Distribution[] memory fees = new Flywheel.Distribution[](2);
         fees[0] = Flywheel.Distribution({
-            recipient: feeRecipient,
-            key: bytes32(bytes20(feeRecipient)),
-            amount: feeAmount,
-            extraData: "fee1"
+            recipient: feeRecipient, key: bytes32(bytes20(feeRecipient)), amount: feeAmount, extraData: "fee1"
         });
         fees[1] = Flywheel.Distribution({
-            recipient: feeRecipient2,
-            key: bytes32(bytes20(feeRecipient2)),
-            amount: feeAmount,
-            extraData: "fee2"
+            recipient: feeRecipient2, key: bytes32(bytes20(feeRecipient2)), amount: feeAmount, extraData: "fee2"
         });
 
         bytes memory hookData = buildSendHookData(payouts, fees, true);
