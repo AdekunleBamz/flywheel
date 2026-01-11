@@ -2,6 +2,8 @@
 
 # Flywheel Protocol
 
+![CI](https://github.com/AdekunleBamz/flywheel/actions/workflows/foundry-ci.yml/badge.svg)
+
 TLDR:
 
 - A modular, permissionless protocol for transparent attribution and ERC20 reward distribution
